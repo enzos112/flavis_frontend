@@ -1,0 +1,271 @@
+@import "tailwindcss";
+
+@config "../tailwind.config.js"; 
+
+@theme {
+  --color-flavis-blue: #326371; 
+  --color-flavis-gold: rgb(222, 181, 99);
+  --color-flavis-dark: #162a30;
+  --color-flavis-card-dark: #1e3b44;
+  
+  /* Definimos el stack de fuentes: Primero el parche, luego la principal */
+  --font-main: "MainFontFix", "Bavista Soulare", serif;
+  --font-secondary: "Prata Regular", serif;
+}
+
+/* --- EL SECRETO: INTERCEPTOR GLOBAL DE SÍMBOLOS Y NÚMEROS --- */
+@font-face {
+  font-family: 'MainFontFix';
+  src: url('/fonts/Prata-Regular.ttf') format('truetype');
+  /* Este rango cubre: Números (0-9), Puntuación (!?.,-), Paréntesis, 
+     signos españoles (¡¿) y símbolos comunes */
+  unicode-range: U+0020-0040, U+005B-0060, U+007B-007E, U+00A1, U+00BF;
+}
+
+@font-face {
+  font-family: 'Bavista Soulare';
+  src: url('/fonts/Bavista_Soulare.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Prata Regular';
+  src: url('/fonts/Prata-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Aplicación global */
+h1, h2, h3, .font-main {
+  font-family: var(--font-main);
+  font-weight: bold;
+}
+
+span, p, b, i {
+  font-variant-numeric: tabular-nums;
+}
+
+.text-with-symbols {
+  font-family: var(--font-secondary), sans-serif !important;
+}
+
+/* --- FIX: ORDEN DE PREFIJOS PARA USER-SELECT --- */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.img-protect {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+.recharts-reference-line-label {
+  font-weight: 900 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-secondary {
+  font-family: var(--font-secondary);
+}
+
+/* --- FIX: COMPATIBILIDAD DE SCROLLBAR --- */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+/* Solo aplicar scrollbar-width si el navegador lo soporta para evitar advertencias */
+@supports (scrollbar-width: none) {
+  .scrollbar-hide {
+    scrollbar-width: none; /* Firefox */
+  }
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* =========================================
+   CALENDARIO FLAVIS: AESTHETIC + FUNCIONAL
+   ========================================= */
+
+.react-datepicker-popper {
+  z-index: 9999 !important;
+}
+
+.react-datepicker {
+  font-family: inherit !important;
+  background-color: #f8f9f5 !important;
+  border: none !important;
+  border-radius: 1.5rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4) !important;
+  display: flex !important;
+  overflow: hidden !important;
+}
+
+.react-datepicker__header {
+  background-color: #eef1e6 !important; 
+  border-bottom: 1px solid rgba(50, 99, 113, 0.1) !important;
+}
+
+.react-datepicker__current-month {
+  color: #326371 !important;
+  font-family: "Bavista Soulare", serif !important; /* Usar tu fuente principal */
+  font-style: italic;
+}
+
+.react-datepicker-time__header {
+  color: #d4af37 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  font-size: 0.8rem !important;
+  font-weight: 800 !important;
+  font-style: italic !important;
+}
+
+.react-datepicker__day-name {
+  color: #326371 !important; /* Color azul flavis para que sea visible */
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  font-size: 0.7rem !important;
+  line-height: 1.8rem !important; 
+  margin: 0.2rem !important;
+}
+
+.react-datepicker__day--disabled {
+  color: #ccc !important; /* Gris claro */
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.react-datepicker__day {
+  color: #326371 !important;
+  font-weight: 600 !important;
+  border-radius: 0.5rem !important;
+  margin: 0.2rem !important;
+  width: 2rem !important;
+  line-height: 2rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.react-datepicker__day:hover {
+  background-color: rgba(50, 99, 113, 0.1) !important;
+  transform: scale(1.1);
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background-color: #d4af37 !important;
+  color: #326371 !important;
+  font-weight: 900 !important;
+  box-shadow: 0 4px 6px -1px rgba(212, 175, 55, 0.4);
+}
+
+.react-datepicker__day--today {
+  font-weight: 900 !important;
+  color: #d4af37 !important;
+}
+
+.react-datepicker__time-container {
+  border-left: 2px solid rgba(50, 99, 113, 0.1) !important;
+  width: 95px !important;
+}
+
+.react-datepicker__header--time {
+  padding-bottom: 1rem !important;
+  padding-top: 1.2rem !important;
+  background-color: #326371 !important;
+}
+
+.react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box {
+  height: 240px !important;
+  width: 100% !important;
+  border-bottom-right-radius: 1.5rem !important;
+}
+
+/* --- FIX: COMPATIBILIDAD DE SCROLLBAR EN LISTA DE TIEMPO --- */
+@supports (scrollbar-width: thin) {
+  .react-datepicker__time-list {
+    scrollbar-width: thin;
+    scrollbar-color: #326371 rgba(50, 99, 113, 0.05);
+  }
+}
+
+.react-datepicker__time-list {
+  height: 240px !important;
+  padding: 0 !important;
+}
+
+.react-datepicker__time-list::-webkit-scrollbar {
+  width: 6px;
+}
+.react-datepicker__time-list::-webkit-scrollbar-track {
+  background: rgba(50, 99, 113, 0.05);
+}
+.react-datepicker__time-list::-webkit-scrollbar-thumb {
+  background-color: #326371;
+  border-radius: 10px;
+}
+
+.react-datepicker__time-list-item {
+  color: #326371 !important;
+  font-weight: 600 !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.1s !important;
+}
+
+.react-datepicker__time-list-item:hover {
+  background-color: rgba(212, 175, 55, 0.2) !important;
+}
+
+.react-datepicker__time-list-item--selected {
+  background-color: #326371 !important;
+  color: #d4af37 !important;
+  font-weight: 800 !important;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: #d4af37 !important;
+  border-width: 2px 2px 0 0 !important;
+}
+.react-datepicker__navigation {
+    top: 15px !important;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shake 0.3s ease-in-out;
+}
+
