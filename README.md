@@ -1,9 +1,3 @@
----
-
-## 🎨 2. README: Frontend (React + Vite)
-
-Crea un archivo llamado `README.md` en la carpeta raíz de tu proyecto de React.
-
 ```markdown
 # 🛒 Flavis Cookies - Client App & Intranet
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://reactjs.org/)
@@ -22,6 +16,7 @@ Crea un archivo `.env` en la raíz del proyecto (este archivo no se sube a GitHu
 
 ```env
 VITE_API_URL=http://localhost:8080/api
+
 
 📦 Instalación
 Clona el repositorio:
@@ -57,4 +52,4 @@ Al ser archivos `.md` (Markdown), GitHub les aplicará automáticamente el forma
 
 **Un detalle clave:** Como estás trabajando con **MySQL**, asegúrate de que en tu código Java (`application.properties`) no hayas dejado el puerto `5432` (que es de Postgres) y que uses el puerto `3306` que es el estándar de MySQL.
 
-¿Te gustaría que te ayude a crear un pequeño **Script de Inicialización SQL** para que,
+¿Te gustaría que te ayude a crear un pequeño **Script de Inicialización SQL** para q
