@@ -23,3 +23,23 @@ Antes de iniciar el proyecto, es necesario configurar la conexión con la API. C
 ```env
 VITE_API_URL=http://localhost:8080/api
 
+📦 Instalación y Arranque
+Sigue estos pasos para levantar el entorno de desarrollo:
+
+Clona el repositorio:
+
+Bash
+
+git clone [https://github.com/tu-usuario/flavis-frontend.git](https://github.com/tu-usuario/flavis-frontend.git)
+Instala las dependencias de Node:
+
+Bash
+
+npm install
+Inicia el modo desarrollo:
+
+Bash
+
+npm run dev
+[!NOTE] El proyecto se abrirá por defecto en http://localhost:5173. Asegúrate de que el Backend esté corriendo en el puerto 8080 para que la conexión sea exitosa.
+
