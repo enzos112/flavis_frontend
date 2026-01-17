@@ -12,6 +12,7 @@ function App() {
   
   const [view, setView] = useState('form');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminUser, setAdminUser] = useState(null);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [lockTimeRemaining, setLockTimeRemaining] = useState(0);
@@ -88,6 +89,18 @@ function App() {
   useEffect(() => {
     localStorage.setItem('flavis_temp_form', JSON.stringify(formData));
   }, [formData]);
+
+  // --- LÓGICA DE PERSISTENCIA JWT ---
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    if (token && storedUser) {
+      setIsAdmin(true);
+      setAdminUser(JSON.parse(storedUser));
+      setView('admin'); 
+    }
+  }, []);
 
   // 2. Temporizador (Fase 2): Resetear nivel de bloqueo si ya pasó mucho tiempo
   useEffect(() => {
@@ -312,19 +325,24 @@ function App() {
     } finally { setLoading(false); }
   };
 
-  const handleLogin = async (credentials) => {
-    try {
-      const res = await api.post('/auth/login', credentials);
-      if (res.data) {
-        setIsAdmin(true);
-        setView('admin');
-      }
-    } catch (err) { throw err; }
+  const handleLogin = (data) => {
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify({ email: data.email, rol: data.rol }));
+    setIsAdmin(true);
+    setAdminUser({ email: data.email, rol: data.rol });
+    setView('admin'); 
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setIsAdmin(false);
+    setAdminUser(null);
+    setView('form');
   };
 
   if (view === 'login') return <Login onLogin={handleLogin} onBack={() => setView('form')} />;
-  if (view === 'admin' && isAdmin) return <Intranet onLogout={() => { setIsAdmin(false); setView('form'); }} />;
-
+  if (view === 'admin' && isAdmin) return <Intranet onLogout={handleLogout} />;
   return (
     <div className="min-h-screen bg-[#326371] pb-20 px-4 md:px-10 relative">
       {isLocked && (

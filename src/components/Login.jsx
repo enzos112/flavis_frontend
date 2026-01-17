@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../services/api';
 
 const Login = ({ onLogin, onBack }) => {
   const [credentials, setCredentials] = useState({ email: '', pass: '' });
@@ -15,7 +16,11 @@ const Login = ({ onLogin, onBack }) => {
     try {
       setIsSubmitting(true);
       setError(false);
-      await onLogin(credentials);
+      
+      const res = await api.post('/auth/login', credentials);
+      
+      onLogin(res.data); 
+      
     } catch (err) {
       setError(true);
       setTimeout(() => setError(false), 3000);
