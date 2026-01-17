@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-// --- LIBRERÍAS SEGURAS ---
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
@@ -16,8 +15,8 @@ const PedidosModule = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [readyOrders, setReadyOrders] = useState([]); 
-  const [activeTab, setActiveTab] = useState('activos'); // 'activos' o 'anulados'
-  const [orderToToggle, setOrderToToggle] = useState(null); // Para el modal de confirmación
+  const [activeTab, setActiveTab] = useState('activos'); 
+  const [orderToToggle, setOrderToToggle] = useState(null); 
   
   const ordersPerPage = 10;
 
@@ -39,7 +38,7 @@ const PedidosModule = () => {
     }
   };
 
-  // --- NUEVA LÓGICA DE NOTIFICACIÓN (MARCAR COMO VISTO) ---
+  // --- LÓGICA DE NOTIFICACIÓN (MARCAR COMO VISTO) ---
   const handleMarcarVisto = async (id) => {
     try {
       await api.patch(`/pedidos/${id}/visto`);
@@ -51,7 +50,6 @@ const PedidosModule = () => {
     }
   };
 
-  // --- LÓGICA DE NEGOCIO (Solo cuenta pedidos NO anulados para producción y caja) ---
   const activeOrders = orders.filter(o => !o.anulado);
 
   const bakingSummary = activeOrders.reduce((acc, order) => {
@@ -64,18 +62,29 @@ const PedidosModule = () => {
 
   const totalRecaudado = activeOrders.reduce((acc, curr) => acc + (curr.montoTotal || 0), 0);
 
-  // Filtrado por pestaña y búsqueda
-  const filteredOrders = orders
+  const filteredOrdersList = orders
     .filter(o => activeTab === 'activos' ? !o.anulado : o.anulado)
     .filter(o => 
       `${o.cliente?.nombre} ${o.cliente?.apellido}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       o.cliente?.celular.includes(searchTerm)
     );
 
+
+  const sortedOrders = [...filteredOrdersList].sort((a, b) => {
+    if (a.visto !== b.visto) {
+      return a.visto ? 1 : -1;
+    }
+    return b.id - a.id; 
+  });
+
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
-  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+  const currentOrders = sortedOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+  const totalPages = Math.ceil(sortedOrders.length / ordersPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeTab]);
 
   const toggleReady = (id) => {
     setReadyOrders(prev => 
@@ -83,12 +92,10 @@ const PedidosModule = () => {
     );
   };
 
-  // --- NUEVA LÓGICA DE ANULACIÓN ---
   const handleToggleAnulado = async () => {
     if (!orderToToggle) return;
     try {
       await api.patch(`/pedidos/${orderToToggle.id}/anular`);
-      // Actualizar estado local para evitar recargar toda la página
       setOrders(prev => prev.map(o => 
         o.id === orderToToggle.id ? { ...o, anulado: !o.anulado } : o
       ));
@@ -169,34 +176,40 @@ const PedidosModule = () => {
   };
 
   const handleNotify = async (order) => {
-    // Formatear la fecha de entrega (Ej: Sábado 06/12)
     const fecha = activePreVenta?.fechaEntrega 
       ? new Date(activePreVenta.fechaEntrega + "T00:00:00").toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: '2-digit' })
       : "Fecha por confirmar";
 
-    // Formatear el resumen de galletas (Sin precios)
     const resumenGalletas = order.detalles
       .map(d => `• ${d.cantidad}x ${d.cookie.nombre}`)
-      .join('%0A'); // %0A es el salto de línea en URL
+      .join('%0A'); 
 
-    const mensaje = `Hola *${order.cliente?.nombre}* 🫂%0A` +
-      `Te escribo confirmando tu orden de *Flavis Cookies of the Week* 🍪%0A%0A` +
+    const hug = "%F0%9F%AB%AC";
+    const cookie = "%F0%9F%8D%AA";
+    const location = "%F0%9F%93%8D";
+    const sparkles = "%E2%9C%A8";
+    const alert = "%F0%9F%9A%A8";
+    const warning = "%E2%9A%A0%EF%B8%8F";
+    const heart = "%F0%9F%AA%B5";
+
+    const mensaje = `Hola *${order.cliente?.nombre}* ${hug}%0A` +
+      `Te escribo confirmando tu orden de *Flavis Cookies of the Week* ${cookie}%0A%0A` +
       `*Resumen de tu orden:*%0A${resumenGalletas}%0A%0A` +
-      `*Dirección de recojo:*%0A📍Las gardenias 106, Surco%0A` +
+      `*Dirección de recojo:*%0A${location} Las gardenias 106, Surco%0A` +
       `Horario: ${activePreVenta?.horarioEntrega || '3pm - 6pm'}%0A` +
       `${fecha.charAt(0).toUpperCase() + fecha.slice(1)}%0A%0A` +
       `*Al llegar (usted o su delivery) debe:*%0A%0A` +
       `   1. Acercarse a recepción%0A` +
       `   2. Brindar el nombre que puso en el formulario%0A` +
       `   3. Le entregarán su cajita%0A%0A` +
-      `🚨 *NO olvidar* 👇🏼%0A%0A` +
-      `⚠️ Debe llegar dentro del horario%0A` +
-      `⚠️ En caso de no poder recogerlo, se coordina para el día siguiente%0A` +
-      `⚠️ Devoluciones con 48hr anticipación%0A` +
-      `⚠️ Mantener la caja en horizontal%0A%0A` +
-      `Sin más, estoy feliz de hornearte tu postrecito de finde, no dudes en consultar si algo no quedó claro 🩵`;
+      `${alert} *NO olvidar* 👇🏼%0A%0A` +
+      `${warning} Debe llegar dentro del horario%0A` +
+      `${warning} En caso de no poder recogerlo, se coordina para el día siguiente%0A` +
+      `${warning} Devoluciones con 48hr anticipación%0A` +
+      `${warning} Mantener la caja en horizontal%0A%0A` +
+      `Sin más, estoy feliz de hornearte tu postrecito de finde, no dudes en consultar si algo no quedó claro ${heart}`;
 
-    window.open(`https://wa.me/51${order.cliente?.celular}?text=${mensaje}`, '_blank');
+    window.open(`https://api.whatsapp.com/send?phone=51${order.cliente?.celular}&text=${mensaje}`, '_blank');
   };
 
 
@@ -244,7 +257,7 @@ const PedidosModule = () => {
           onClick={() => { setActiveTab('anulados'); setCurrentPage(1); }}
           className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'anulados' ? 'bg-red-500 text-white shadow-lg' : 'text-red-500/40 dark:text-red-400/40 hover:bg-red-500/5'}`}
         >
-          Papelera / Anulados ({orders.filter(o => o.anulado).length})
+          Pedidos Anulados ({orders.filter(o => o.anulado).length})
         </button>
       </div>
 

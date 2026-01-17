@@ -1,57 +1,74 @@
 import React, { useState } from 'react';
 
-// --- MODAL 1: INFORMACIÓN DE ENTREGA (ACTIVO) ---
+// --- MODAL 1: INFORMACIÓN DE ENTREGA (CORRECCIÓN FINAL DE RECORTE) ---
 const InfoModal = ({ isOpen, onClose, onAccept }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-flavis-blue/90 backdrop-blur-sm animate-in">
-      <div className="bg-[#eef1e6] w-full max-w-md rounded-[3rem] p-10 shadow-2xl relative border border-white/20">
-        <h3 className="text-3xl font-main text-flavis-blue italic mb-6 border-b border-flavis-blue/10 pb-4 tracking-tighter text-with-symbols">¿Cómo es la entrega? 👇</h3>
+    // El p-4 aquí garantiza el margen superior e inferior real
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 bg-flavis-blue/95 backdrop-blur-md animate-in">
+      {/* max-h-[calc(100vh-32px)]: Altura máxima de la pantalla menos 32px (margen superior/inferior).
+          rounded-[1.5rem]: Bordes un poco más cerrados en móvil para maximizar espacio de texto.
+      */}
+      <div className="bg-[#eef1e6] w-full max-w-md max-h-[calc(100vh-40px)] overflow-hidden rounded-[1.5rem] sm:rounded-[3rem] shadow-2xl relative border border-white/20 flex flex-col">
         
-        <div className="space-y-6 font-secondary text-flavis-blue leading-relaxed">
+        {/* Título: Reducido a text-lg en móvil */}
+        <div className="p-5 sm:p-10 pb-2 sm:pb-4 flex-shrink-0">
+          <h3 className="text-lg sm:text-3xl font-main text-flavis-blue italic border-b border-flavis-blue/10 pb-3 tracking-tighter text-with-symbols">
+            ¿Cómo es la entrega? 👇
+          </h3>
+        </div>
+        
+        {/* Contenido con Scroll Interno: text-xs (12px) en móvil */}
+        <div className="px-5 sm:px-10 overflow-y-auto space-y-4 sm:space-y-6 font-secondary text-flavis-blue leading-relaxed text-xs sm:text-base custom-scrollbar">
           <div>
-            <p className="font-bold mb-3 text-lg italic flex items-center gap-2">📦 Delivery:</p>
-            <div className="space-y-3 text-[15px] font-medium opacity-95">
+            <p className="font-bold mb-2 text-sm sm:text-lg italic flex items-center gap-2">📦 Delivery:</p>
+            <div className="space-y-2 opacity-95">
               <p>• Envía un motorizado a la ubicación que enviaré por WhatsApp en la fecha y hora indicada.</p>
               <p>• Solo Lima. Asegúrate de que tu motorizado pueda llegar a Santiago de Surco.</p>
             </div>
 
-            <div className="mt-4 bg-flavis-gold/15 p-4 rounded-2xl border border-flavis-gold/30">
-              <p className="text-[13px] leading-snug font-secondary text-flavis-blue font-bold text-with-symbols">
+            <div className="mt-4 bg-flavis-gold/15 p-3 sm:p-4 rounded-xl border border-flavis-gold/30">
+              <p className="text-[11px] sm:text-[13px] leading-snug font-bold">
                 (Solo envío la ubicación exacta una vez completada la compra)
               </p>
-              <p className="text-[11px] mt-1 font-sans font-black text-flavis-blue/50 uppercase tracking-wider">
+              <p className="text-[9px] sm:text-[11px] mt-1 font-sans font-black text-flavis-blue/50 uppercase tracking-wider">
                 Ref: Parque Casuarinas, Santiago de Surco
               </p>
             </div>
           </div>
 
           <div className="pt-2 border-t border-flavis-blue/5">
-            <p className="font-bold mb-2 text-lg italic flex items-center gap-2 text-with-symbols">🤍 Recojo:</p>
-            <p className="text-[15px] font-medium opacity-95">
+            <p className="font-bold mb-1 text-sm sm:text-lg italic text-with-symbols">🤍 Recojo:</p>
+            <p className="opacity-95">
               Dirígete a la ubicación que te enviaré por WhatsApp y consulta por tu pedido con tu nombre.
             </p>
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3">
-            <button onClick={onAccept} className="w-full bg-flavis-blue text-white py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-lg hover:bg-flavis-gold hover:text-flavis-blue transition-all font-sans">He leído y acepto</button>
-            <button onClick={onClose} className="w-full py-2 text-flavis-blue/40 text-[9px] font-bold uppercase tracking-widest font-sans">Cerrar</button>
+        {/* Botones: Ajustados para no ocupar tanto espacio vertical */}
+        <div className="p-5 sm:p-10 pt-4 sm:pt-6 flex flex-col gap-2 flex-shrink-0">
+            <button onClick={onAccept} className="w-full bg-flavis-blue text-white py-3 sm:py-4 rounded-xl font-bold uppercase tracking-widest text-[9px] sm:text-[10px] shadow-lg hover:bg-flavis-gold transition-all font-sans">He leído y acepto</button>
+            <button onClick={onClose} className="w-full py-1 text-flavis-blue/40 text-[9px] font-bold uppercase tracking-widest font-sans">Cerrar</button>
         </div>
       </div>
     </div>
   );
 };
 
-// --- MODAL 2: DINÁMICA DE PEDIDOS (CERRADO) ---
+// --- MODAL 2: DINÁMICA DE PEDIDOS (YA ESTABA MEJOR, PERO AJUSTADO) ---
 const ClosedInfoModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-flavis-blue/90 backdrop-blur-sm animate-in">
-      <div className="bg-[#eef1e6] w-full max-w-md rounded-[3rem] p-10 shadow-2xl relative border border-white/20">
-        <h3 className="text-3xl font-main text-flavis-blue italic mb-6 border-b border-flavis-blue/10 pb-4 tracking-tighter text-with-symbols">Nuestra Dinámica 🍪</h3>
+    <div className="fixed inset-0 z-[900] flex items-center justify-center p-4 bg-flavis-blue/90 backdrop-blur-sm animate-in">
+      {/* Aplicada la misma lógica de contenedor que InfoModal */}
+      <div className="bg-[#eef1e6] w-[95%] sm:w-full max-w-md max-h-[90vh] rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 shadow-2xl relative border border-white/20 flex flex-col">
         
-        <div className="space-y-6 font-secondary text-flavis-blue text-sm leading-relaxed">
+        <h3 className="text-xl sm:text-3xl font-main text-flavis-blue italic mb-4 sm:mb-6 border-b border-flavis-blue/10 pb-4 tracking-tighter text-with-symbols flex-shrink-0">
+          Nuestra Dinámica 🍪
+        </h3>
+        
+        {/* Ajustado a text-sm para móvil */}
+        <div className="space-y-4 sm:space-y-6 font-secondary text-flavis-blue text-sm sm:text-base leading-relaxed overflow-y-auto pr-2 custom-scrollbar flex-grow">
           <div>
             <p className="font-bold mb-2 text-base italic text-with-symbols">✨ Pre-Ventas Semanales</p>
             <p className="opacity-90">Horneamos lotes exclusivos por temporada. Cada semana abrimos el formulario por tiempo limitado o hasta agotar stock.</p>
@@ -62,44 +79,50 @@ const ClosedInfoModal = ({ isOpen, onClose }) => {
             <p className="opacity-90 text-with-symbols">Atendemos en Santiago de Surco (Ref. Parque Casuarinas). Puedes recoger tu pedido o enviar a tu motorizado favorito en el horario indicado al momento de tu compra.</p>
           </div>
 
-          <div className="bg-flavis-gold/15 p-5 rounded-2xl border border-flavis-gold/30">
-            <p className="font-bold text-[11px] uppercase tracking-widest mb-2 font-sans text-flavis-blue/70">Aviso de Seguridad:</p>
-            <p className="text-[13px] leading-normal font-secondary text-flavis-blue font-medium">
+          <div className="bg-flavis-gold/15 p-4 sm:p-5 rounded-2xl border border-flavis-gold/30">
+            <p className="font-bold text-[10px] sm:text-[11px] uppercase tracking-widest mb-2 font-sans text-flavis-blue/70">Aviso de Seguridad:</p>
+            <p className="text-xs sm:text-[13px] leading-normal font-secondary text-flavis-blue font-medium">
               Por seguridad mutua, la ubicación exacta y detalles de contacto se comparten por WhatsApp únicamente tras confirmar la validación de tu pedido.
             </p>
           </div>
         </div>
 
-        <div className="mt-8">
-            <button onClick={onClose} className="w-full bg-flavis-blue text-white py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-lg hover:bg-flavis-gold hover:text-flavis-blue transition-all font-sans">Entendido</button>
+        <div className="mt-6 sm:mt-8 flex-shrink-0">
+            <button onClick={onClose} className="w-full bg-flavis-blue text-white py-3 sm:py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-lg hover:bg-flavis-gold hover:text-flavis-blue transition-all font-sans">Entendido</button>
         </div>
       </div>
     </div>
   );
 };
 
-// --- MODAL 3: COMPRAS MAYORISTAS (+20 GALLETAS) ---
+// --- MODAL 3: COMPRAS MAYORISTAS (CORREGIDO RESPONSIVE) ---
 const WholesaleModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
-  const cookieEmoji = String.fromCodePoint(0x1F36A);
-  const wholesaleText = encodeURIComponent(`Hola! Quisiera realizar un pedido mayorista de galletas ${cookieEmoji}`);
+
+  const handleWholesaleClick = () => {
+    const phone = "51933304850";
+    const msg = encodeURIComponent("¡Hola! Quisiera realizar un pedido mayorista de galletas ") + "%F0%9F%8D%AA";
+    const url = `https://api.whatsapp.com/send?phone=${phone}&text=${msg}`;
+    window.open(url, '_blank');
+  };
+
   return (
-    <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-flavis-blue/95 backdrop-blur-md animate-in">
-      <div className="bg-[#eef1e6] w-full max-w-sm rounded-[3rem] p-10 text-center shadow-2xl border border-white/20">
-        <div className="text-5xl mb-4 text-with-symbols">🍪✨</div>
-        <h3 className="text-2xl font-main text-flavis-blue italic mb-4 tracking-tighter text-with-symbols">¡Pedido Especial!</h3>
-        <p className="font-secondary text-flavis-blue text-sm leading-relaxed mb-8 text-with-symbols">
+    <div className="fixed inset-0 z-[900] flex items-center justify-center p-4 bg-flavis-blue/95 backdrop-blur-md animate-in">
+      {/* Lógica de contenedor responsivo aplicada */}
+      <div className="bg-[#eef1e6] w-[95%] sm:w-full max-w-sm rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 text-center shadow-2xl border border-white/20 max-h-[90vh] overflow-y-auto flex flex-col">
+        <div className="text-4xl sm:text-5xl mb-4 text-with-symbols flex-shrink-0">🍪✨</div>
+        <h3 className="text-xl sm:text-2xl font-main text-flavis-blue italic mb-4 tracking-tighter text-with-symbols flex-shrink-0">¡Pedido Especial!</h3>
+        {/* Texto reducido a text-sm */}
+        <p className="font-secondary text-flavis-blue text-sm sm:text-base leading-relaxed mb-6 sm:mb-8 text-with-symbols flex-grow">
           Para pedidos mayores a <span className="font-bold text-with-symbols">20 unidades</span>, nos gusta coordinar directamente para asegurar que tus galletas lleguen frescas y perfectas.
         </p>
-        <div className="flex flex-col gap-3">
-          <a 
-            href={`https://wa.me/51933304850?text=${wholesaleText}`} 
-            target="_blank" 
-            rel="noreferrer"
-            className="w-full bg-green-500 text-white py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-lg hover:bg-green-600 transition-all flex items-center justify-center gap-2 font-sans"
+        <div className="flex flex-col gap-3 flex-shrink-0">
+          <button 
+            onClick={handleWholesaleClick}
+            className="w-full bg-[#25D366] text-white py-3 sm:py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-lg hover:scale-105 transition-all flex items-center justify-center gap-2 font-sans"
           >
             Contactar por WhatsApp
-          </a>
+          </button>
           <button onClick={onClose} className="w-full py-2 text-flavis-blue/40 text-[9px] font-bold uppercase tracking-widest font-sans">Regresar al formulario</button>
         </div>
       </div>
@@ -107,55 +130,93 @@ const WholesaleModal = ({ isOpen, onClose }) => {
   );
 };
 
-// --- MODAL 4: DETALLE DE GALLETA (RECUPERADO) ---
+// --- MODAL 4: DETALLE DE GALLETA (CORREGIDO RESPONSIVE - Preventivo) ---
 const CookieDetailModal = ({ cookie, isOpen, onClose }) => {
   if (!isOpen || !cookie) return null;
   return (
-    <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-flavis-blue/95 backdrop-blur-md animate-in" onClick={onClose}>
-      <div className="bg-[#eef1e6] w-full max-w-sm rounded-[3rem] overflow-hidden shadow-2xl relative border border-white/20" onClick={e => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-6 right-6 z-10 bg-white/80 text-flavis-blue w-10 h-10 rounded-full flex items-center justify-center shadow-lg font-sans font-bold hover:scale-110 transition-all">✕</button>
+    <div className="fixed inset-0 z-[900] flex items-center justify-center p-4 bg-flavis-blue/95 backdrop-blur-md animate-in" onClick={onClose}>
+      {/* Lógica de contenedor responsivo aplicada */}
+      <div className="bg-[#eef1e6] w-[95%] sm:w-full max-w-sm rounded-[2rem] sm:rounded-[3rem] overflow-hidden shadow-2xl relative border border-white/20 max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        {/* Botón de cierre ajustado para móviles */}
+        <button onClick={onClose} className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 bg-white/80 text-flavis-blue w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-lg font-sans font-bold hover:scale-110 transition-all">✕</button>
         
-        <div className="h-64 w-full img-protect">
+        {/* Altura de imagen ajustada para móviles */}
+        <div className="h-48 sm:h-64 w-full img-protect flex-shrink-0">
           <img src={cookie.imagenUrl} alt={cookie.nombre} className="w-full h-full object-cover" />
         </div>
         
-        <div className="p-10">
-          <h3 className="text-3xl font-main text-flavis-blue italic mb-2 tracking-tighter">{cookie.nombre}</h3>
-          <p className="text-flavis-gold font-bold text-xl mb-6 italic text-with-symbols font-secondary">S/ {cookie.precio.toFixed(2)}</p>
+        {/* Padding y textos ajustados */}
+        <div className="p-6 sm:p-10 flex-grow overflow-y-auto custom-scrollbar">
+          <h3 className="text-2xl sm:text-3xl font-main text-flavis-blue italic mb-2 tracking-tighter">{cookie.nombre}</h3>
+          <p className="text-flavis-gold font-bold text-lg sm:text-xl mb-4 sm:mb-6 italic text-with-symbols font-secondary">S/ {cookie.precio.toFixed(2)}</p>
           
           <div className="space-y-4">
-            <p className="text-[10px] uppercase font-black text-flavis-blue/30 tracking-[0.2em] font-sans">Descripción</p>
-            <p className="font-secondary text-flavis-blue/80 text-sm leading-relaxed text-with-symbols">
+            <p className="text-[9px] sm:text-[10px] uppercase font-black text-flavis-blue/30 tracking-[0.2em] font-sans">Descripción</p>
+            {/* Texto de descripción reducido a text-sm */}
+            <p className="font-secondary text-flavis-blue/80 text-sm sm:text-base leading-relaxed text-with-symbols">
               {cookie.descripcion || "Una creación artesanal horneada con los mejores ingredientes para alegrar tu semana. ✨"}
             </p>
           </div>
-          
-          <button onClick={onClose} className="w-full mt-10 bg-flavis-blue text-white py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-lg hover:bg-flavis-gold hover:text-flavis-blue transition-all font-sans">Cerrar Detalle</button>
+        </div>
+        <div className="p-6 sm:p-10 pt-0 flex-shrink-0">
+           <button onClick={onClose} className="w-full bg-flavis-blue text-white py-3 sm:py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-lg hover:bg-flavis-gold hover:text-flavis-blue transition-all font-sans">Cerrar Detalle</button>
         </div>
       </div>
     </div>
   );
 };
 
-// --- MODAL 5: ÉXITO DEL PEDIDO (GRACIAS) ---
+// --- MODAL 5: ÉXITO DEL PEDIDO (CORREGIDO RESPONSIVE) ---
 const SuccessModal = ({ isOpen, onClose, customerName }) => {
   if (!isOpen) return null;
   const firstName = customerName ? customerName.trim().split(' ')[0] : 'Cookie Lover';
 
   return (
-    <div className="fixed inset-0 z-[800] flex items-center justify-center p-4 bg-flavis-blue/95 backdrop-blur-md animate-in">
-      <div className="bg-[#eef1e6] w-full max-w-sm rounded-[3rem] p-12 text-center shadow-2xl relative border border-white/10">
-        <div className="w-20 h-20 bg-flavis-gold/10 rounded-full flex items-center justify-center text-4xl mx-auto mb-8 text-with-symbols">🍪</div>
-        <h2 className="text-3xl font-main text-flavis-blue italic mb-4 tracking-tighter text-with-symbols">
+    <div className="fixed inset-0 z-[900] flex items-center justify-center p-4 bg-flavis-blue/95 backdrop-blur-md animate-in">
+      {/* Lógica de contenedor responsivo aplicada */}
+      <div className="bg-[#eef1e6] w-[95%] sm:w-full max-w-sm rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-12 text-center shadow-2xl relative border border-white/10 max-h-[90vh] overflow-y-auto flex flex-col">
+        {/* Icono ajustado */}
+        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-flavis-gold/10 rounded-full flex items-center justify-center text-3xl sm:text-4xl mx-auto mb-6 sm:mb-8 text-with-symbols flex-shrink-0">🍪</div>
+        {/* Título ajustado */}
+        <h2 className="text-2xl sm:text-3xl font-main text-flavis-blue italic mb-4 tracking-tighter text-with-symbols flex-shrink-0">
           ¡Gracias, {firstName}!
         </h2>
-        <div className="space-y-2 text-sm font-secondary text-flavis-blue/70 leading-relaxed mb-10 text-with-symbols">
+        {/* Texto ajustado a text-sm */}
+        <div className="space-y-2 text-sm sm:text-base font-secondary text-flavis-blue/70 leading-relaxed mb-6 sm:mb-10 text-with-symbols flex-grow">
           <p>Tu pedido ha sido registrado con éxito.</p>
           <p>Estamos preparando tu pedido con mucho amor. ✨</p>
           <p className="font-bold italic text-flavis-gold">¡Pronto nos veremos para la entrega!</p>
         </div>
-        <button onClick={onClose} className="w-full bg-flavis-blue text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-lg hover:scale-105 transition-all text-with-symbols font-sans font-sans">
+        <button onClick={onClose} className="w-full bg-flavis-blue text-white py-3 sm:py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] shadow-lg hover:scale-105 transition-all text-with-symbols font-sans flex-shrink-0">
           ¡GENIAL!
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// --- MODAL 6: ADVERTENCIA DATOS INCOMPLETOS (NUEVO & RESPONSIVE) ---
+const WarningModal = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-6 bg-flavis-blue/90 backdrop-blur-sm animate-in">
+      <div className="bg-[#eef1e6] w-full max-w-xs sm:max-w-sm rounded-[2rem] p-6 sm:p-10 text-center shadow-2xl border-t-8 border-red-500 max-h-[80vh] overflow-y-auto flex flex-col">
+        <div className="text-3xl sm:text-4xl mb-3 flex-shrink-0">⚠️</div>
+        <h3 className="text-lg sm:text-2xl font-main text-flavis-blue italic mb-3 tracking-tighter">
+          ¡Casi listo!
+        </h3>
+        <p className="font-secondary text-flavis-blue text-xs sm:text-base leading-relaxed mb-6 flex-grow">
+          Para procesar tu pedido, necesitamos que todos los campos marcados con <span className="text-red-500 font-bold">*</span> estén completos.
+          <br /><br />
+          <span className="text-[10px] opacity-70 italic">
+            (Revisa los campos resaltados en rojo arriba)
+          </span>
+        </p>
+        <button 
+          onClick={onClose} 
+          className="w-full bg-flavis-blue text-white py-3 rounded-xl font-bold uppercase tracking-widest text-[9px] shadow-lg hover:bg-flavis-gold transition-all font-sans"
+        >
+          Revisar Formulario
         </button>
       </div>
     </div>
@@ -166,7 +227,7 @@ const CLOSED_MESSAGE = (
   <>
     ¡Nuestros hornos están tomando un breve descanso! 🍪<br />
     <span className="text-sm font-normal block mt-2 opacity-80 font-secondary text-with-symbols">
-      Estamos preparando la próxima <span className="font-bold border-b border-flavis-gold">producción</span> para sorprenderte. Vuelve pronto para no quedarte sin tus favoritas. ✨
+      Estamos preparando la próxima producción para sorprenderte. Vuelve pronto para no quedarte sin tus favoritas. ✨
     </span>
   </>
 );
@@ -176,21 +237,39 @@ const OrderForm = ({
   qrUrl, previewUrl, onRemoveFile, loading, isSearching, preVenta, 
   cart, cookies, total, handleOrder, formErrors, isShaking, 
   successOrder, setSuccessOrder, successName,
-  selectedCookie, setSelectedCookie, isDetailModalOpen, setIsDetailModalOpen 
+  selectedCookie, setSelectedCookie, isDetailModalOpen, setIsDetailModalOpen,
+  isClosed
 }) => {
   const [copiedId, setCopiedId] = useState(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showClosedModal, setShowClosedModal] = useState(false);
   const [showWholesaleModal, setShowWholesaleModal] = useState(false);
-
-  const isClosed = !preVenta || preVenta.isClosed;
+  const [showWarningModal, setShowWarningModal] = useState(false);
 
   const validateAndOrder = () => {
+    const errors = {};
+    if (!formData.nombres?.trim()) errors.nombres = true;
+    if (!formData.apellidos?.trim()) errors.apellidos = true;
+    if (!formData.celular || formData.celular.length < 9) errors.celular = true;
+    if (!formData.comprobanteUrl) errors.comprobanteUrl = true;
+    if (!formData.aceptoCondiciones) errors.aceptoCondiciones = true;
+    
     const totalQuantity = Object.values(cart).reduce((a, b) => a + b, 0);
+    if (totalQuantity === 0) errors.total = true;
+
+    if (Object.keys(errors).length > 0) {
+      setShowWarningModal(true); 
+      handleOrder(); 
+      return;
+    }
+
+    // 3. Si no hay errores de campos, revisamos si es pedido mayorista
     if (totalQuantity > 20) {
       setShowWholesaleModal(true);
       return;
     }
+
+    // 4. Si todo está perfecto, enviamos el pedido
     handleOrder();
   };
 
@@ -240,44 +319,60 @@ const OrderForm = ({
     </button>
   );
 
+ const handleWhatsAppClick = (tipo) => {
+    const phone = "51933304850";
+    const emojiCode = "%F0%9F%8D%AA"; 
+    
+    const baseMsg = tipo === 'cerrado' 
+      ? "¡Hola! Tengo una duda sobre la próxima preventa de Flavis"
+      : "¡Hola! Tengo una duda sobre los pedidos de Flavis";
+
+    const fullTextEncoded = encodeURIComponent(baseMsg) + " " + emojiCode;
+    
+    const url = `https://api.whatsapp.com/send?phone=${phone}&text=${fullTextEncoded}`;
+    
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="mt-20 max-w-full overflow-hidden no-select">
       <InfoModal isOpen={showInfoModal} onClose={() => setShowInfoModal(false)} onAccept={handleAcceptFromModal} />
       <ClosedInfoModal isOpen={showClosedModal} onClose={() => setShowClosedModal(false)} />
       <WholesaleModal isOpen={showWholesaleModal} onClose={() => setShowWholesaleModal(false)} />
-      
-      <CookieDetailModal cookie={selectedCookie} isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} />
-      
-      {/* Sincronizado con el nombre que el usuario escribe */}
+      <WarningModal isOpen={showWarningModal} onClose={() => setShowWarningModal(false)} />
+      <CookieDetailModal cookie={selectedCookie} isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} />  
       <SuccessModal isOpen={successOrder} onClose={() => setSuccessOrder(false)} customerName={successName} />
 
       {isClosed ? (
-        <div className="p-16 bg-[#eef1e6]/10 border-2 border-dashed border-flavis-gold/30 rounded-[3rem] text-center animate-in font-secondary">
-          <div className="text-6xl mb-6 opacity-40 font-sans text-with-symbols">🍪</div>
-          <h2 className="text-4xl text-flavis-gold font-main font-bold italic mb-4 tracking-tight text-with-symbols">Próximamente nueva Pre-Venta</h2>
-          <div className="text-white/90 max-w-lg mx-auto leading-relaxed mb-8">
+        <div className="p-6 sm:p-10 md:p-16 bg-[#eef1e6]/10 border-2 border-dashed border-flavis-gold/30 rounded-[2.5rem] sm:rounded-[3rem] text-center animate-in font-secondary mx-auto w-full max-w-4xl">
+          <div className="text-4xl sm:text-6xl mb-4 sm:mb-6 opacity-40 font-sans text-with-symbols">🍪</div>
+          
+          <h2 className="text-2xl xs:text-3xl sm:text-4xl text-flavis-gold font-main font-bold italic mb-4 tracking-tight text-with-symbols break-words leading-tight">
+            Próximamente nueva Pre-Venta
+          </h2>
+          
+          <div className="text-white/90 max-w-lg mx-auto leading-relaxed mb-8 text-sm sm:text-base">
             {CLOSED_MESSAGE}
           </div>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mt-8 px-4 w-full max-w-md mx-auto">
             <button 
               onClick={() => setShowClosedModal(true)} 
-              className="bg-flavis-gold text-flavis-blue px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl font-sans"
+              className="w-full sm:w-auto bg-flavis-gold text-flavis-blue px-4 sm:px-8 py-4 sm:py-3 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl font-sans leading-tight"
             >
               ¿Cómo funcionan nuestros pedidos?
             </button>
             
-            {/* NUEVO BOTÓN DE DUDAS ESTILIZADO */}
-            <a 
-              href={`https://wa.me/51933304850?text=${encodeURIComponent("¡Hola! Tengo una duda sobre la próxima preventa de Flavis \uD83C\uDF6A")}`}
-              target="_blank" 
-              rel="noreferrer" 
-              className="flex items-center gap-2 bg-[#25D366] hover:scale-105 active:scale-95 text-white px-8 py-3 rounded-full transition-all shadow-xl font-sans font-black uppercase text-[10px] tracking-widest"
+            {/* BOTÓN WHATSAPP DE DUDAS (ESTADO CERRADO) */}
+            <button 
+              onClick={() => handleWhatsAppClick('cerrado')}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#25D366] hover:scale-105 active:scale-95 text-white px-8 py-4 sm:py-3 rounded-full transition-all shadow-xl font-sans font-black uppercase text-[9px] sm:text-[10px] tracking-widest leading-tight"
             >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
               </svg>
-              <span>Escríbenos por dudas</span>
-            </a>
+              <span className="whitespace-normal">Escríbenos por dudas</span>
+            </button>
           </div>
         </div>
       ) : (
@@ -378,32 +473,58 @@ const OrderForm = ({
                 </div>
             </div>
 
-            {/* Slot 3: Info Importante */}
-            <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] animate-in flex flex-col gap-6 order-3 lg:order-3">
-              <p className="text-[10px] uppercase font-black text-flavis-gold tracking-[0.3em] font-sans">Información Importante</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-white text-sm leading-relaxed">
-                <div className="space-y-2">
-                  <p className="font-bold text-flavis-gold italic text-base">Cronograma</p>
-                  <p className="text-with-symbols">
-                    <span className="opacity-60 text-xs">Cierre:</span> <br/> 
-                    <span className="font-secondary text-base font-bold">
-                      {preVenta?.fechaCierre ? new Date(preVenta.fechaCierre).toLocaleString('es-PE', { weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }) : '--'}
-                    </span>
-                  </p>
-                  <p className="text-with-symbols">
-                    <span className="opacity-60 text-xs">Entrega:</span> <br/> 
-                    <span className="font-secondary text-2xl font-bold text-flavis-gold">
-                      {preVenta?.fechaEntrega ? new Date(preVenta.fechaEntrega + "T00:00:00").toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: '2-digit' }) : '--'}
-                    </span> 
-                    <br/> 
-                    <span className="text-sm opacity-80 italic font-secondary text-with-symbols">
-                      ({preVenta?.horarioEntrega})
-                    </span>
-                  </p>
+            {/* Slot 3: Información Importante (AJUSTADO Y ESTILIZADO) */}
+            <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] animate-in flex flex-col gap-8 order-3 lg:order-3">
+              <p className="text-[10px] uppercase font-black text-flavis-gold tracking-[0.3em] font-sans">
+                Información Importante
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-white">
+                {/* COLUMNA 1: CRONOGRAMA */}
+                <div className="space-y-6">
+                  <p className="font-main font-bold text-flavis-gold italic text-lg tracking-tight">Cronograma</p>
+                  
+                  <div className="space-y-5">
+                    {/* CIERRE */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] uppercase font-black opacity-40 tracking-widest font-sans">Cierre de pedidos</span>
+                      <span className="font-secondary text-[15px] font-bold leading-tight">
+                        {preVenta?.fechaCierre 
+                          ? new Date(preVenta.fechaCierre).toLocaleString('es-PE', { weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }) 
+                          : '--'}
+                      </span>
+                    </div>
+
+                    {/* ENTREGA */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] uppercase font-black opacity-40 tracking-widest font-sans">Fecha de entrega</span>
+                      <span className="font-secondary text-[15px] font-bold text-flavis-gold leading-tight">
+                        {preVenta?.fechaEntrega 
+                          ? new Date(preVenta.fechaEntrega + "T00:00:00").toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: '2-digit' }) 
+                          : '--'}
+                      </span>
+                      <span className="text-[12px] opacity-70 italic font-secondary leading-none">
+                        ({preVenta?.horarioEntrega || 'Horario por confirmar'})
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2 border-t sm:border-t-0 sm:border-l border-white/10 pt-4 sm:pt-0 sm:pl-6">
-                  <p className="font-bold text-flavis-gold italic text-base">Ubicación</p>
-                  <p><br/> <span className="font-bold italic">Santiago de Surco</span> <br/> <span className="text-xs opacity-80">Ref. Parque Casuarinas</span></p>
+
+                {/* COLUMNA 2: UBICACIÓN */}
+                <div className="space-y-6 border-t sm:border-t-0 sm:border-l border-white/10 pt-6 sm:pt-0 sm:pl-8">
+                  <p className="font-main font-bold text-flavis-gold italic text-lg tracking-tight">Ubicación</p>
+                  
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] uppercase font-black opacity-40 tracking-widest font-sans">Distrito</span>
+                      <span className="font-secondary text-[15px] font-bold leading-tight">Santiago de Surco</span>
+                      <span className="text-[12px] opacity-70 italic font-secondary">Ref. Parque Casuarinas</span>
+                    </div>
+
+                    <p className="text-[11px] leading-relaxed opacity-40 italic font-secondary pt-2">
+                      * La ubicación exacta se compartirá por WhatsApp tras validar el pago.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -512,19 +633,16 @@ const OrderForm = ({
                     </span>
                   </a>
 
-                  {/* BOTÓN WHATSAPP DE DUDAS (BLINDADO) */}
+                  {/* BOTÓN WHATSAPP DE DUDAS*/}
+                  {/* BOTÓN WHATSAPP DE DUDAS (FOOTER COMPACTO) */}
                   <button 
-                    onClick={() => {
-                      const cookie = String.fromCodePoint(0x1F36A);
-                      const msg = encodeURIComponent(`¡Hola! Tengo una duda sobre los pedidos de Flavis ${cookie}`);
-                      window.open(`https://wa.me/51933304850?text=${msg}`, '_blank');
-                    }}
-                    className="flex items-center gap-2 bg-[#25D366] hover:scale-105 active:scale-95 text-white px-8 py-3 rounded-full transition-all shadow-xl font-sans font-black uppercase text-[10px] tracking-widest"
+                    onClick={() => handleWhatsAppClick('footer')} 
+                    className="flex items-center gap-2 bg-[#25D366] hover:scale-105 active:scale-95 text-white px-5 py-2 rounded-full transition-all shadow-md group font-sans"
                   >
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                     </svg>
-                    <span>Escríbenos por dudas</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest">¿Dudas?</span>
                   </button>
                 </div>
               </div>

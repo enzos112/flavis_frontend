@@ -5,7 +5,7 @@ import CookiesModule from './admin/CookiesModule';
 import PreVentaModule from './admin/PreVentaModule';
 import ClientesModule from './admin/ClientesModule';
 import DashboardModule from './admin/DashboardModule';
-import HistorialModule from './admin/HistorialModule'; // 1. AGREGAR ESTE IMPORT
+import HistorialModule from './admin/HistorialModule'; 
 
 const Intranet = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('dashboard');

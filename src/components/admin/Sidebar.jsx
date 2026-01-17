@@ -1,7 +1,7 @@
-import React, { useState } from 'react'; // 1. Importar useState
+import React, { useState } from 'react'; 
 
 const Sidebar = ({ activeTab, setActiveTab, onLogout, darkMode, setDarkMode }) => {
-  const [showConfirm, setShowConfirm] = useState(false); // 2. Estado para la confirmación
+  const [showConfirm, setShowConfirm] = useState(false); 
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard'},
@@ -31,7 +31,7 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout, darkMode, setDarkMode }) =
             key={item.id}
             onClick={() => {
               setActiveTab(item.id);
-              setShowConfirm(false); // Cerrar confirmación si cambia de pestaña
+              setShowConfirm(false); 
             }}
             className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-sm transition-all duration-300 ${
               activeTab === item.id 
@@ -46,7 +46,7 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout, darkMode, setDarkMode }) =
 
       {/* --- SECCIÓN INFERIOR: TOGGLE & LOGOUT --- */}
       <div className="mt-auto flex flex-col gap-8">
-        {/* BOTÓN MODO OSCURO (Sin cambios) */}
+        {/* BOTÓN MODO OSCURO */}
         <div className="flex flex-col gap-3 px-2">
           <p className="text-[8px] uppercase font-black text-flavis-blue/30 dark:text-white/20 tracking-widest ml-1">
             Apariencia

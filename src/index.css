@@ -8,17 +8,13 @@
   --color-flavis-dark: #162a30;
   --color-flavis-card-dark: #1e3b44;
   
-  /* Definimos el stack de fuentes: Primero el parche, luego la principal */
   --font-main: "MainFontFix", "Bavista Soulare", serif;
   --font-secondary: "Prata Regular", serif;
 }
 
-/* --- EL SECRETO: INTERCEPTOR GLOBAL DE SÍMBOLOS Y NÚMEROS --- */
 @font-face {
   font-family: 'MainFontFix';
   src: url('/fonts/Prata-Regular.ttf') format('truetype');
-  /* Este rango cubre: Números (0-9), Puntuación (!?.,-), Paréntesis, 
-     signos españoles (¡¿) y símbolos comunes */
   unicode-range: U+0020-0040, U+005B-0060, U+007B-007E, U+00A1, U+00BF;
 }
 
@@ -52,7 +48,7 @@ span, p, b, i {
   font-family: var(--font-secondary), sans-serif !important;
 }
 
-/* --- FIX: ORDEN DE PREFIJOS PARA USER-SELECT --- */
+/* --- ORDEN DE PREFIJOS PARA USER-SELECT --- */
 .no-select {
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -84,12 +80,11 @@ body {
   font-family: var(--font-secondary);
 }
 
-/* --- FIX: COMPATIBILIDAD DE SCROLLBAR --- */
+/* --- COMPATIBILIDAD DE SCROLLBAR --- */
 .scrollbar-hide {
   -ms-overflow-style: none; /* IE/Edge */
 }
 
-/* Solo aplicar scrollbar-width si el navegador lo soporta para evitar advertencias */
 @supports (scrollbar-width: none) {
   .scrollbar-hide {
     scrollbar-width: none; /* Firefox */
@@ -109,9 +104,7 @@ body {
   animation: fadeIn 0.3s ease-out forwards;
 }
 
-/* =========================================
-   CALENDARIO FLAVIS: AESTHETIC + FUNCIONAL
-   ========================================= */
+/* CALENDARIO */
 
 .react-datepicker-popper {
   z-index: 9999 !important;
@@ -134,8 +127,7 @@ body {
 
 .react-datepicker__current-month {
   color: #326371 !important;
-  font-family: "Bavista Soulare", serif !important; /* Usar tu fuente principal */
-  font-style: italic;
+  font-family: "Bavista Soulare", serif !important; 
 }
 
 .react-datepicker-time__header {
@@ -148,7 +140,7 @@ body {
 }
 
 .react-datepicker__day-name {
-  color: #326371 !important; /* Color azul flavis para que sea visible */
+  color: #326371 !important;
   font-weight: 800 !important;
   text-transform: uppercase;
   font-size: 0.7rem !important;
@@ -157,7 +149,7 @@ body {
 }
 
 .react-datepicker__day--disabled {
-  color: #ccc !important; /* Gris claro */
+  color: #ccc !important; 
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -207,7 +199,6 @@ body {
   border-bottom-right-radius: 1.5rem !important;
 }
 
-/* --- FIX: COMPATIBILIDAD DE SCROLLBAR EN LISTA DE TIEMPO --- */
 @supports (scrollbar-width: thin) {
   .react-datepicker__time-list {
     scrollbar-width: thin;

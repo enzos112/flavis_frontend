@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../services/api';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -39,46 +39,89 @@ const DashboardModule = ({ isDarkMode }) => {
     }
   };
 
+  // --- FILTRADO DE ÓRDENES (REGLA: NO ANULADOS + REGLA: ÚLTIMAS 3 CAMPAÑAS) ---
   const filteredOrders = orders
-    .filter(o => !o.anulado)
-    .filter(o => 
-      selectedPV === 'all' ? true : o.preVenta?.id?.toString() === selectedPV.toString()
-    );
+    .filter(o => !o.anulado) // Solo pedidos válidos
+    .filter(o => {
+      if (selectedPV === 'all') {
+        // En vista general, solo mostramos lo que pertenece a las últimas 3 campañas cargadas
+        return allPreventas.some(pv => pv.id === o.preVenta?.id);
+      }
+      return o.preVenta?.id?.toString() === selectedPV.toString();
+    });
 
   const totalIngresos = filteredOrders.reduce((acc, curr) => acc + (curr.montoTotal || 0), 0);
   const totalOrdenes = filteredOrders.length;
   const ticketPromedio = totalOrdenes > 0 ? totalIngresos / totalOrdenes : 0;
 
+  // --- PROCESAMIENTO DE TIEMPO PARA EL GRÁFICO ---
   const salesTimeline = filteredOrders.reduce((acc, o) => {
     const date = new Date(o.fechaCreacion).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' });
-    if (!acc[date]) acc[date] = { total: 0, pvId: o.preVenta?.id, rawDate: new Date(o.fechaCreacion) };
+    if (!acc[date]) {
+      acc[date] = { 
+        total: 0, 
+        pvId: o.preVenta?.id, 
+        rawDate: new Date(o.fechaCreacion),
+        campaniaName: o.preVenta?.nombreCampania 
+      };
+    }
     acc[date].total += o.montoTotal;
     return acc;
   }, {});
 
-  const chartData = Object.entries(salesTimeline)
-    .map(([name, data]) => ({ 
-      name, 
-      total: data.total, 
-      pvId: data.pvId,
-      rawDate: data.rawDate 
-    }))
-    .sort((a, b) => a.rawDate - b.rawDate);
+  // --- LÓGICA DE FILTRADO PARA EL GRÁFICO (REGLA: ÚLTIMAS 3 CON DATOS) ---
+  const chartOrders = useMemo(() => {
+    const validOrders = orders.filter(o => !o.anulado);
+    
+    if (selectedPV === 'all') {
+      // 1. Identificamos los IDs de las últimas 3 campañas que sí tienen pedidos
+      const campaignsWithOrders = [...new Set(validOrders.map(o => o.preVenta?.id))]
+        .sort((a, b) => b - a)
+        .slice(0, 3);
+        
+      // 2. Filtramos pedidos solo de esas 3 campañas para el gráfico
+      return validOrders.filter(o => campaignsWithOrders.includes(o.preVenta?.id));
+    }
+    
+    // Si hay una campaña específica seleccionada, solo mostramos esa
+    return validOrders.filter(o => o.preVenta?.id?.toString() === selectedPV.toString());
+  }, [orders, selectedPV]);
 
-  // --- LÓGICA DINÁMICA DE NOMBRES DE CAMPAÑA EN GRÁFICO ---
-  const divisionLines = [];
-  if (selectedPV === 'all' && chartData.length > 0) {
-    for (let i = 1; i < chartData.length; i++) {
-      if (chartData[i].pvId !== chartData[i - 1].pvId) {
-        // Buscamos el nombre real de la campaña que inicia en este punto
-        const campaniaIniciante = allPreventas.find(pv => pv.id === chartData[i].pvId);
-        divisionLines.push({
-          x: chartData[i].name,
-          label: campaniaIniciante?.nombreCampania || 'Nueva Campaña'
+  // --- GENERACIÓN DE DATOS DEL GRÁFICO ---
+  const chartData = useMemo(() => {
+    const salesTimeline = chartOrders.reduce((acc, o) => {
+      const date = new Date(o.fechaCreacion).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' });
+      if (!acc[date]) {
+        acc[date] = { total: 0, pvId: o.preVenta?.id, campaniaName: o.preVenta?.nombreCampania, rawDate: new Date(o.fechaCreacion) };
+      }
+      acc[date].total += o.montoTotal;
+      return acc;
+    }, {});
+
+    return Object.entries(salesTimeline)
+      .map(([name, data]) => ({ name, total: data.total, pvId: data.pvId, campaniaName: data.campaniaName, rawDate: data.rawDate }))
+      .sort((a, b) => a.rawDate - b.rawDate);
+  }, [chartOrders]);
+
+  // --- LÓGICA DE TRIPLE LÍNEA DIVISORIA (ESTÁTICA Y MÓVIL) ---
+  const divisionLines = useMemo(() => {
+    if (selectedPV !== 'all' || chartData.length === 0) return [];
+    
+    const lines = [];
+    const uniquePVIds = [...new Set(chartData.map(d => d.pvId))];
+
+    uniquePVIds.forEach((id) => {
+      // Encontramos el primer punto de datos que pertenece a esta campaña
+      const firstOccurence = chartData.find(d => d.pvId === id);
+      if (firstOccurence) {
+        lines.push({
+          x: firstOccurence.name,
+          label: firstOccurence.campaniaName
         });
       }
-    }
-  }
+    });
+    return lines;
+  }, [chartData, selectedPV]);
 
   const cookieStats = filteredOrders.reduce((acc, o) => {
     if (o.detalles) {
@@ -93,11 +136,12 @@ const DashboardModule = ({ isDarkMode }) => {
   const topCookie = Object.entries(cookieStats).sort((a, b) => b[1] - a[1])[0] || ["---", 0];
   const pieData = Object.entries(cookieStats).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 
+  // --- EXPORTACIÓN A EXCEL CON REGLA DE PRIVACIDAD (ANÓNIMOS) ---
   const exportGlobalExcel = async () => {
     const workbook = new ExcelJS.Workbook();  
     const isAll = selectedPV === 'all';
     const pvData = allPreventas.find(pv => pv.id.toString() === selectedPV.toString());
-    const sheetName = isAll ? 'Historial Total' : `Campaña ${pvData?.nombreCampania}`;
+    const sheetName = isAll ? 'Historial Flavis' : `Campania_${pvData?.nombreCampania.substring(0, 15)}`;
     const sheet = workbook.addWorksheet(sheetName);
     
     sheet.columns = [
@@ -113,60 +157,57 @@ const DashboardModule = ({ isDarkMode }) => {
       sheet.addRow({
         campania: o.preVenta?.nombreCampania || 'N/A',
         fecha: new Date(o.fechaCreacion).toLocaleDateString(),
-        cliente: `${o.cliente?.nombre} ${o.cliente?.apellido}`,
-        celular: o.cliente?.celular,
+        // REGLA DE PRIVACIDAD: Si el cliente NO guardó datos, se oculta
+        cliente: o.cliente?.guardarDatos ? `${o.cliente.nombre} ${o.cliente.apellido}` : 'ANÓNIMO',
+        celular: o.cliente?.guardarDatos ? o.cliente.celular : 'OCULTO',
         pedido: o.detalles?.map(d => `${d.cantidad}x ${d.cookie?.nombre}`).join(", "),
         monto: o.montoTotal.toFixed(2)
       });
     });
 
-    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF326371' } };
+
     sheet.addRow({});
-    const totalRow = sheet.addRow({ pedido: 'TOTAL RECAUDADO EN ESTA VISTA:', monto: totalIngresos.toFixed(2) });
+    const totalRow = sheet.addRow({ 
+      pedido: 'RESUMEN TOTAL DE INGRESOS:', 
+      monto: totalIngresos.toFixed(2) 
+    });
     totalRow.font = { bold: true };
 
     const buffer = await workbook.xlsx.writeBuffer();
-    const fileName = isAll ? 'Flavis_Historico_Total_Ventas' : `Flavis_Reporte_${pvData?.nombreCampania.replace(/\s+/g, '_')}`;
+    const fileName = isAll ? 'Flavis_Historico_Privacidad' : `Reporte_Campaña_${pvData?.nombreCampania.replace(/\s+/g, '_')}`;
     saveAs(new Blob([buffer]), `${fileName}.xlsx`);
   };
 
   const sendDailySummary = () => {
     let mensaje = "";
+    const emojiCookie = "%F0%9F%8D%AA", emojiChart = "%F0%9F%93%88", emojiMoney = "%F0%9F%92%B0", emojiBox = "%F0%9F%93%A6";
+
     if (selectedPV === 'all') {
-      const validOrders = orders.filter(o => !o.anulado);
-      const salesByPV = validOrders.reduce((acc, o) => {
-        const nombre = o.preVenta?.nombreCampania || "Sin nombre";
-        acc[nombre] = (acc[nombre] || 0) + o.montoTotal;
-        return acc;
-      }, {});
-      const mejorPV = Object.entries(salesByPV).sort((a, b) => b[1] - a[1])[0] || ["---", 0];
-      mensaje = `📈 *FLAVIS - RECORRIDO HISTÓRICO*%0A%0A` +
-        `✅ *Campañas evaluadas:* ${allPreventas.length}%0A` +
-        `💰 *Ingresos Totales:* S/ ${totalIngresos.toFixed(2)}%0A` +
-        `📦 *Pedidos Totales:* ${totalOrdenes}%0A` +
-        `🎟️ *Ticket Promedio:* S/ ${ticketPromedio.toFixed(2)}%0A` +
-        `⭐ *Cookie All-Star:* ${topCookie[0]}%0A%0A` +
-        `🏆 *Campaña Récord:* ${mejorPV[0]} (S/ ${mejorPV[1].toFixed(2)})%0A%0A` +
-        `_¡Flavis sigue creciendo!_ 🍪`;
+      // REPORTE GLOBAL: Usa todos los datos históricos
+      mensaje = `${emojiChart} *FLAVIS - RECORRIDO HISTÓRICO*%0A%0A` +
+        `*Ingresos Totales:* S/ ${totalIngresos.toFixed(2)}%0A` +
+        `*Pedidos Totales:* ${totalOrdenes}%0A` +
+        `*Cookie All-Star:* ${topCookie[0]}%0A%0A` +
+        `_¡Flavis sigue creciendo!_ ${emojiCookie}`;
     } else {
+      // REPORTE ESPECÍFICO: Solo la campaña seleccionada
       const pvActual = allPreventas.find(pv => pv.id.toString() === selectedPV.toString());
-      const totalGalletasVendidas = Object.values(cookieStats).reduce((a, b) => a + b, 0);
-      mensaje = `📊 *REPORTE DE CAMPAÑA: ${pvActual?.nombreCampania}*%0A%0A` +
-        `💰 *Ventas Totales:* S/ ${totalIngresos.toFixed(2)}%0A` +
-        `📦 *N° de Pedidos:* ${totalOrdenes}%0A` +
-        `🍪 *Galletas Horneadas:* ${totalGalletasVendidas}%0A` +
-        `🎟️ *Gasto Promedio:* S/ ${ticketPromedio.toFixed(2)}%0A` +
-        `⭐ *Más pedida:* ${topCookie[0]}%0A%0A` +
-        `_Datos actualizados al momento._`;
+      mensaje = `${emojiChart} *REPORTE DE CAMPAÑA: ${pvActual?.nombreCampania}*%0A%0A` +
+        `*Ventas:* S/ ${totalIngresos.toFixed(2)}%0A` +
+        `*N° de Pedidos:* ${totalOrdenes}%0A%0A` +
+        `_Datos actualizados._`;
     }
-    window.open(`https://wa.me/?text=${mensaje}`, '_blank');
+    window.open(`https://api.whatsapp.com/send?text=${mensaje}`, '_blank');
   };
 
-  // MetricCard ahora usa font-secondary para los valores numéricos
   const MetricCard = ({ title, value, color, isMainFont = false }) => (
-    <div className="bg-white dark:bg-flavis-card-dark p-8 rounded-[2.5rem] shadow-sm border border-flavis-blue/5 dark:border-white/5 transition-all duration-300">
-      <p className="text-[9px] uppercase font-black text-flavis-blue/40 dark:text-white/30 tracking-[0.2em] mb-2 font-sans">{title}</p>
-      <p className={`text-3xl font-black tracking-tighter ${color} ${isMainFont ? 'font-main italic' : 'font-secondary text-with-symbols'}`}>
+    <div className="bg-white dark:bg-flavis-card-dark p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-flavis-blue/5 dark:border-white/5 transition-all duration-300 min-w-0 flex flex-col justify-center">
+      <p className="text-[9px] uppercase font-black text-flavis-blue/40 dark:text-white/30 tracking-[0.2em] mb-2 font-sans truncate">
+        {title}
+      </p>
+      <p className={`text-xl sm:text-2xl lg:text-3xl font-black tracking-tighter leading-tight break-words ${color} ${isMainFont ? 'font-main italic' : 'font-secondary text-with-symbols'}`}>
         {value}
       </p>
     </div>
@@ -185,7 +226,7 @@ const DashboardModule = ({ isDarkMode }) => {
               value={selectedPV}
               onChange={(e) => setSelectedPV(e.target.value)}
             >
-              <option value="all">Historial Total de Flavis</option>
+              <option value="all">Historial Total</option>
               {allPreventas.map(pv => (
                 <option key={pv.id} value={pv.id}>Campaña: {pv.nombreCampania}</option>
               ))}
@@ -208,87 +249,93 @@ const DashboardModule = ({ isDarkMode }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        
+        {/* GRÁFICO CON TRIPLE LÍNEA DIVISORIA */}
         <div className="bg-white dark:bg-flavis-card-dark p-8 rounded-[3rem] shadow-xl border border-flavis-blue/5 dark:border-white/5 transition-all duration-300">
           <h3 className="text-xl font-main font-bold text-flavis-blue dark:text-white italic mb-8 transition-colors">Flujo de Ingresos</h3>
-          <div className="h-72 w-full relative min-h-[350px]"> {/* Aumentado min-h para dar espacio al Label */}
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                {/* Aumentado margin-top a 50 para que el nombre de campaña no se corte */}
-                <AreaChart data={chartData} margin={{ top: 50, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#b8995a" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#b8995a" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
-                  <XAxis dataKey="name" fontSize={10} tickMargin={10} axisLine={false} tickLine={false} tick={{fill: chartTextColor, fontWeight: 'bold'}} className="font-secondary" />
-                  <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{fill: chartTextColor, fontWeight: 'bold'}} className="font-secondary" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: isDarkMode ? '#1e3b44' : '#fff', 
-                      borderRadius: '20px', 
-                      border: 'none', 
-                      boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
-                      fontFamily: 'Prata, serif',
-                      color: isDarkMode ? '#fff' : '#326371'
-                    }} 
-                  />
-                  {/* --- LÍNEAS DE DIVISIÓN CON NOMBRE REAL DE CAMPAÑA --- */}
-                  {divisionLines.map((line, idx) => (
-                    <ReferenceLine key={idx} x={line.x} stroke={isDarkMode ? '#ffffff30' : '#ccc'} strokeDasharray="5 5">
-                      <Label 
-                        value={line.label} 
-                        position="top" 
-                        fill={isDarkMode ? '#b8995a' : '#326371'} 
-                        fontSize={9} 
-                        fontWeight="bold" 
-                        offset={15} 
-                        className="font-secondary italic"
-                      />
-                    </ReferenceLine>
-                  ))}
-                  <Area type="monotone" dataKey="total" stroke="#b8995a" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" isAnimationActive={true} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-flavis-blue/20 dark:text-white/10 italic text-sm">Sin datos</div>
-            )}
+          <div className="h-72 w-full relative min-h-[350px]"> 
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 50, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#b8995a" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#b8995a" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
+                <XAxis dataKey="name" fontSize={10} tickMargin={10} axisLine={false} tickLine={false} tick={{fill: chartTextColor, fontWeight: 'bold'}} className="font-secondary" />
+                <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{fill: chartTextColor, fontWeight: 'bold'}} className="font-secondary" />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: isDarkMode ? '#1e3b44' : '#fff', 
+                    borderRadius: '20px', border: 'none', 
+                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', 
+                    fontFamily: 'Prata, serif', color: isDarkMode ? '#fff' : '#326371'
+                  }} 
+                />
+                
+                {/* TRIPLE LÍNEA DIVISORIA DINÁMICA */}
+                {divisionLines.map((line, idx) => (
+                  <ReferenceLine key={idx} x={line.x} stroke={isDarkMode ? '#ffffff30' : '#ccc'} strokeDasharray="5 5">
+                    <Label 
+                      value={line.label} 
+                      position="top" 
+                      fill={isDarkMode ? '#b8995a' : '#326371'} 
+                      fontSize={9} fontWeight="bold" 
+                      offset={15} className="font-secondary italic"
+                    />
+                  </ReferenceLine>
+                ))}
+
+                <Area type="monotone" dataKey="total" stroke="#b8995a" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" isAnimationActive={true} />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
+        {/* MIX DE SABORES (LEYENDA DETALLADA RECUPERADA) */}
         <div className="bg-white dark:bg-flavis-card-dark p-8 rounded-[3rem] shadow-xl border border-flavis-blue/5 dark:border-white/5 transition-all duration-300">
           <h3 className="text-xl font-main font-bold text-flavis-blue dark:text-white italic mb-8 transition-colors">Mix de Sabores</h3>
           <div className="h-72 w-full flex items-center">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="50%" height="100%">
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                   {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: isDarkMode ? '#1e3b44' : '#fff', 
-                    borderRadius: '20px', 
-                    border: 'none',
-                    fontFamily: 'Prata, serif',
-                    color: isDarkMode ? '#fff' : '#326371'
-                  }} 
-                />
+                <Tooltip contentStyle={{ backgroundColor: isDarkMode ? '#1e3b44' : '#fff', borderRadius: '20px', border: 'none', fontFamily: 'Prata, serif', color: isDarkMode ? '#fff' : '#326371' }} />
               </PieChart>
             </ResponsiveContainer>
-            <div className="w-1/2 space-y-2">
-              {pieData.slice(0, 5).map((entry, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{backgroundColor: COLORS[index % COLORS.length]}} />
-                  <span className="text-[10px] font-bold text-flavis-blue dark:text-white/80 truncate font-secondary">{entry.name}</span>
-                </div>
-              ))}
+            
+            {/* LEYENDA DETALLADA LADO DERECHO CON SCROLL LIMITADO */}
+            <div className="w-1/2 pl-4 pr-2 overflow-y-auto max-h-[210px] custom-scrollbar">
+              <div className="space-y-2">
+                {pieData.map((entry, index) => (
+                  <div 
+                    key={index} 
+                    className="flex items-center justify-between gap-2 border-b border-flavis-blue/5 dark:border-white/5 pb-2 last:border-0"
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <div 
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
+                        style={{backgroundColor: COLORS[index % COLORS.length]}} 
+                      />
+                      <span className="text-[10px] font-black text-flavis-blue dark:text-white/80 truncate font-sans uppercase tracking-tight">
+                        {entry.name}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-black text-flavis-gold font-sans ml-1">
+                      {entry.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </div>
+      <div className="h-20"></div>
     </div>
   );
 };

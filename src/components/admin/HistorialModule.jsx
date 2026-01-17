@@ -8,10 +8,14 @@ const OrderDetailModal = ({ order, isOpen, onClose }) => {
     <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-flavis-blue/90 backdrop-blur-sm animate-in" onClick={onClose}>
       <div className="bg-[#eef1e6] w-full max-w-md rounded-[3rem] p-10 shadow-2xl relative border border-white/20" onClick={e => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-6 right-6 text-flavis-blue/40 hover:text-flavis-blue font-bold transition-colors">✕</button>
-        <h3 className="text-3xl font-main text-flavis-blue italic mb-6 border-b border-flavis-blue/10 pb-4 tracking-tighter">Detalle del Pedido</h3>
+        <h3 className="text-xl font-sans font-black text-flavis-blue uppercase tracking-tight mb-6 border-b border-flavis-blue/10 pb-4">
+          Detalle del Pedido
+        </h3>
         <div className="space-y-6 font-secondary text-flavis-blue">
           <div className="bg-white/50 p-6 rounded-3xl border border-white/40">
-            <p className="text-[10px] uppercase font-black opacity-40 tracking-widest mb-3">Galletas Seleccionadas</p>
+            <p className="text-[10px] uppercase font-black opacity-70 text-flavis-blue tracking-widest mb-3">
+              Galletas Seleccionadas
+            </p>
             <div className="space-y-3">
               {order.detalles.map((det, idx) => (
                 <div key={idx} className="flex justify-between items-center border-b border-flavis-blue/5 pb-2">
@@ -38,23 +42,23 @@ const OrderDetailModal = ({ order, isOpen, onClose }) => {
   );
 };
 
-// --- MODAL: PREVIEW DE VOUCHER (CON RESPALDO EXTERNO) ---
+// --- MODAL: PREVIEW DE VOUCHER ---
 const VoucherPreviewModal = ({ imageUrl, isOpen, onClose }) => {
   if (!isOpen || !imageUrl) return null;
 
   return (
     <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-flavis-blue/95 backdrop-blur-md animate-in" onClick={onClose}>
       <div className="relative max-w-sm w-full bg-[#eef1e6] rounded-[3rem] overflow-hidden shadow-2xl border border-white/20" onClick={e => e.stopPropagation()}>
-        
         <button onClick={onClose} className="absolute top-6 right-6 z-10 bg-white/80 text-flavis-blue w-10 h-10 rounded-full flex items-center justify-center shadow-lg font-bold hover:scale-110 transition-all">✕</button>
-        
         <div className="p-10 pb-4">
-            <h3 className="text-2xl font-main text-flavis-blue italic tracking-tighter">Comprobante de Pago</h3>
-            <p className="text-[10px] font-secondary uppercase font-black opacity-30 tracking-widest mt-1">Vista Previa del Historial</p>
+            <h3 className="text-xl font-sans font-black text-flavis-blue uppercase tracking-tight">
+              Comprobante de Pago
+            </h3>
+            <p className="text-[10px] font-sans uppercase font-bold opacity-60 text-flavis-blue tracking-widest mt-1">
+              Vista Previa del Historial
+            </p>
         </div>
-
         <div className="px-8 pb-10">
-            {/* CONTENEDOR DE IMAGEN */}
             <div className="rounded-[2rem] overflow-hidden border-4 border-white shadow-inner bg-gray-200 aspect-[3/4] img-protect group relative">
                 <img 
                   src={imageUrl} 
@@ -62,27 +66,16 @@ const VoucherPreviewModal = ({ imageUrl, isOpen, onClose }) => {
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.target.onerror = null; 
-                    e.target.src = 'https://placehold.co/400x600/326371/white?text=Imagen+de+Prueba+o+No+Encontrada';
+                    e.target.src = 'https://placehold.co/400x600/326371/white?text=Imagen+No+Encontrada';
                   }}
                 />
             </div>
-
-            {/* BOTÓN DE RESPALDO SI EL PREVIEW FALLA O ES UNA URL DEMO */}
             <div className="mt-6 space-y-3">
-              <a 
-                href={imageUrl} 
-                target="_blank" 
-                rel="noreferrer" 
-                className="flex items-center justify-center gap-2 w-full text-[10px] font-black uppercase text-flavis-blue/40 hover:text-flavis-gold transition-colors"
-              >
-                <span>🔗 Abrir original en pestaña nueva</span>
+              <a href={imageUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 w-full text-[10px] font-black uppercase text-flavis-blue/40 hover:text-flavis-gold transition-colors">
+                <span>🔗 Abrir original</span>
               </a>
-
-              <button 
-                onClick={onClose} 
-                className="w-full bg-flavis-blue text-white py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-lg font-sans hover:bg-flavis-gold hover:text-flavis-blue transition-all"
-              >
-                Cerrar Vista Previa
+              <button onClick={onClose} className="w-full bg-flavis-blue text-white py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] shadow-lg font-sans hover:bg-flavis-gold hover:text-flavis-blue transition-all">
+                Cerrar
               </button>
             </div>
         </div>
@@ -97,17 +90,18 @@ const HistorialModule = () => {
   const [pedidosHistorial, setPedidosHistorial] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Estados para Modales
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [isVoucherOpen, setIsVoucherOpen] = useState(false);
 
-  // Filtros y Paginación
   const [searchTermCampaign, setSearchTermCampaign] = useState('');
   const [searchTermCustomer, setSearchTermCustomer] = useState('');
   const [currentPageCamp, setCurrentPageCamp] = useState(1);
   const [currentPageOrders, setCurrentPageOrders] = useState(1);
+
+  const campPerPage = 3;
+  const ordersPerPage = 5;
 
   useEffect(() => { fetchCampanias(); }, []);
 
@@ -117,12 +111,9 @@ const HistorialModule = () => {
         const cerradas = res.data
         .filter(pv => !pv.activo)
         .sort((a, b) => b.id - a.id); 
-        
         setCampanias(cerradas);
-    } catch (err) {
-        console.error("Error al cargar campañas", err);
-    }
-    };
+    } catch (err) { console.error("Error al cargar campañas", err); }
+  };
 
   const verContenedor = async (cp) => {
     setLoading(true);
@@ -136,15 +127,26 @@ const HistorialModule = () => {
     finally { setLoading(false); }
   };
 
-  // Lógica de Filtrado y Paginación
+  // --- LÓGICA DE FILTRADO Y PAGINACIÓN ---
   const filteredCampaigns = campanias.filter(cp => cp.nombreCampania.toLowerCase().includes(searchTermCampaign.toLowerCase()));
-  const currentCampaigns = filteredCampaigns.slice((currentPageCamp - 1) * 3, currentPageCamp * 3);
-  const filteredOrders = pedidosHistorial.filter(p => `${p.cliente.nombre} ${p.cliente.apellido}`.toLowerCase().includes(searchTermCustomer.toLowerCase()));
-  const currentOrders = filteredOrders.slice((currentPageOrders - 1) * 5, currentPageOrders * 5);
+  const totalPagesCamp = Math.ceil(filteredCampaigns.length / campPerPage);
+  const currentCampaigns = filteredCampaigns.slice((currentPageCamp - 1) * campPerPage, currentPageCamp * campPerPage);
+
+  
+  const validOrders = pedidosHistorial.filter(p => !p.anulado);
+  const canceledCount = pedidosHistorial.filter(p => p.anulado).length;
+  const filteredOrders = validOrders.filter(p => 
+    `${p.cliente.nombre} ${p.cliente.apellido}`.toLowerCase().includes(searchTermCustomer.toLowerCase())
+  );
+
+  const totalPagesOrders = Math.ceil(filteredOrders.length / ordersPerPage);
+  const currentOrders = filteredOrders.slice((currentPageOrders - 1) * ordersPerPage, currentPageOrders * ordersPerPage);
 
   return (
     <div className="p-6 font-secondary text-flavis-blue dark:text-white transition-colors animate-in">
-      <h2 className="text-4xl font-main italic font-bold mb-10 tracking-tight">Historial de Campañas</h2>
+      <h2 className="text-4xl font-sans font-black text-flavis-blue dark:text-white uppercase tracking-tighter mb-10">
+        Historial de Campañas
+      </h2>
 
       {/* MODALES */}
       <OrderDetailModal order={selectedOrder} isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} />
@@ -152,48 +154,115 @@ const HistorialModule = () => {
 
       {/* BÚSQUEDA Y CARDS */}
       <div className="mb-8 max-w-md">
-        <label className="block text-[10px] uppercase font-black opacity-40 tracking-widest mb-2 ml-2">Buscar Campaña</label>
-        <input type="text" placeholder="Ej: Enero..." className="w-full bg-white dark:bg-flavis-card-dark border border-flavis-blue/10 dark:border-white/10 p-4 rounded-2xl outline-none focus:border-flavis-gold transition-all font-bold text-sm" value={searchTermCampaign} onChange={(e) => {setSearchTermCampaign(e.target.value); setCurrentPageCamp(1);}} />
+        <label className="block text-[10px] uppercase font-black opacity-70 text-flavis-blue dark:text-white/70 tracking-widest mb-2 ml-2 font-sans">
+          Buscar Campaña
+        </label>
+        <input type="text" placeholder="Ej: Enero..." className="w-full bg-white dark:bg-flavis-card-dark border border-flavis-blue/10 dark:border-white/10 p-4 rounded-2xl outline-none focus:border-flavis-gold transition-all font-bold text-sm font-sans" value={searchTermCampaign} onChange={(e) => {setSearchTermCampaign(e.target.value); setCurrentPageCamp(1);}} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         {currentCampaigns.map(cp => (
           <button key={cp.id} onClick={() => verContenedor(cp)} className={`p-8 rounded-[2.5rem] border transition-all text-left relative overflow-hidden ${campaniaSeleccionada?.id === cp.id ? 'bg-flavis-gold border-flavis-gold text-flavis-blue shadow-2xl scale-[1.02]' : 'bg-white dark:bg-flavis-card-dark border-flavis-blue/10 text-flavis-blue dark:text-white hover:border-flavis-gold hover:shadow-lg'}`}>
-            <p className={`text-[10px] uppercase font-black mb-1 opacity-50 ${campaniaSeleccionada?.id === cp.id ? 'text-flavis-blue' : ''}`}>Contenedor Cerrado</p>
-            <h3 className="font-bold text-xl leading-tight mb-4">{cp.nombreCampania}</h3>
-            <p className="text-[11px] font-medium opacity-70 text-with-symbols">📅 Entrega: {cp.fechaEntrega}</p>
+            <p className={`text-[10px] uppercase font-black mb-1 opacity-80 font-sans ${campaniaSeleccionada?.id === cp.id ? 'text-flavis-blue' : 'text-flavis-blue/70 dark:text-white/60'}`}>
+              Contenedor Cerrado
+            </p>
+            <h3 className="font-sans font-black text-xl uppercase leading-tight mb-4">
+              {cp.nombreCampania}
+            </h3>
+            <p className="text-[11px] font-medium opacity-70 text-with-symbols font-sans">📅 Entrega: {cp.fechaEntrega}</p>
           </button>
         ))}
       </div>
 
+      {/* --- PAGINACIÓN CAMPAÑAS --- */}
+      {totalPagesCamp > 1 && (
+        <div className="flex justify-center gap-2 mt-4 mb-12">
+          {[...Array(totalPagesCamp)].map((_, i) => (
+            <button key={i} onClick={() => setCurrentPageCamp(i + 1)} className={`w-8 h-8 rounded-full font-bold text-[10px] transition-all ${currentPageCamp === i + 1 ? 'bg-flavis-gold text-white shadow-lg scale-110' : 'bg-white dark:bg-white/5 text-flavis-blue/40 border border-flavis-blue/5'}`}>
+                {i + 1}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* SECCIÓN TABLA */}
       {campaniaSeleccionada && (
-        <div className="bg-white dark:bg-flavis-card-dark rounded-[3rem] p-10 shadow-2xl border border-flavis-blue/5 dark:border-white/5 animate-in">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
-            <h3 className="text-2xl font-bold text-flavis-gold">Pedidos de: {campaniaSeleccionada.nombreCampania}</h3>
-            <input type="text" placeholder="Buscar cliente..." className="bg-flavis-blue/5 dark:bg-white/5 border border-transparent focus:border-flavis-gold p-3 px-6 rounded-2xl outline-none text-sm font-bold min-w-[250px]" value={searchTermCustomer} onChange={(e) => {setSearchTermCustomer(e.target.value); setCurrentPageOrders(1);}} />
+      <div className="bg-white dark:bg-flavis-card-dark rounded-[3rem] p-10 shadow-2xl border border-flavis-blue/5 dark:border-white/5 animate-in">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-4">
+          <h3 className="text-2xl font-bold text-flavis-gold">Pedidos de: {campaniaSeleccionada.nombreCampania}</h3>
+          <input 
+            type="text" 
+            placeholder="Buscar cliente..." 
+            className="bg-flavis-blue/5 dark:bg-white/5 border border-transparent focus:border-flavis-gold p-3 px-6 rounded-2xl outline-none text-sm font-bold min-w-[250px]" 
+            value={searchTermCustomer} 
+            onChange={(e) => {setSearchTermCustomer(e.target.value); setCurrentPageOrders(1);}} 
+          />
+        </div>
+
+        {/* PANEL DE VERIFICACIÓN RÁPIDA */}
+        <div className="flex flex-wrap gap-4 mb-8">
+          <div className="bg-flavis-blue/5 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-flavis-blue/50 border border-flavis-blue/5">
+            Total Válidos: {validOrders.length}
           </div>
+          <div className="bg-green-500/10 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-green-600">
+            Guardados: {validOrders.filter(p => p.guardarDatos).length}
+          </div>
+          <div className="bg-gray-500/10 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-gray-500">
+            Anónimos: {validOrders.filter(p => !p.guardarDatos).length}
+          </div>
+          
+          {/* INDICADOR DE ANULADOS (SOLO NÚMERO) */}
+          {canceledCount > 0 && (
+            <div className="bg-red-500/10 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-red-500 border border-red-500/10">
+              Anulados: {canceledCount}
+            </div>
+          )}
+        </div>
 
           <div className="overflow-x-auto min-h-[300px]">
             <table className="w-full text-left border-separate border-spacing-y-3">
               <thead>
-                <tr className="text-[10px] uppercase font-black text-flavis-blue/30 dark:text-white/30 tracking-[0.2em]"><th className="px-6 pb-2">Cliente</th><th className="px-6 pb-2">Fecha Pedido</th><th className="px-6 pb-2 text-center">Total</th><th className="px-6 pb-2 text-right">Acciones</th></tr>
+                <tr className="text-[10px] uppercase font-black text-flavis-blue/70 dark:text-white/60 tracking-[0.2em] font-sans">
+                    <th className="px-6 pb-2">Cliente</th>
+                    <th className="px-6 pb-2">Fecha Pedido</th>
+                    <th className="px-6 pb-2 text-center">Total</th>
+                    <th className="px-6 pb-2 text-right">Acciones</th>
+                </tr>
               </thead>
               <tbody>
                 {currentOrders.map(p => (
                   <tr key={p.id} className="bg-flavis-blue/5 dark:bg-white/5 hover:bg-flavis-blue/10 dark:hover:bg-white/10 transition-colors">
-                    <td className="px-6 py-5 rounded-l-2xl font-bold">{p.cliente.nombre} {p.cliente.apellido}</td>
-                    <td className="px-6 py-5 text-with-symbols opacity-70 font-medium text-xs">{new Date(p.fechaCreacion).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-                    <td className="px-6 py-5 text-center font-black text-flavis-gold text-with-symbols">S/ {p.montoTotal.toFixed(2)}</td>
-                    <td className="px-6 py-5 text-right rounded-r-2xl space-x-3">
-                      <button onClick={() => {setSelectedOrder(p); setIsDetailOpen(true);}} className="text-[10px] font-black uppercase text-flavis-blue/60 dark:text-white/60 hover:text-flavis-gold transition-all border-b border-current">Detalle</button>
-                      <button onClick={() => {setSelectedVoucher(p.comprobanteUrl); setIsVoucherOpen(true);}} className="text-[10px] font-black uppercase text-flavis-gold/70 hover:text-flavis-gold transition-all border-b border-current">Ver Pago</button>
+                    <td className="px-6 py-5 rounded-l-2xl">
+                      <p className="font-sans font-black text-sm text-flavis-blue dark:text-white uppercase tracking-tight">
+                        {p.guardarDatos ? `${p.cliente.nombre} ${p.cliente.apellido}` : "Cliente Anónimo"}
+                      </p>
+                    </td>
+                    <td className="px-6 py-5 text-with-symbols opacity-80 text-flavis-blue dark:text-white/70 font-bold text-xs font-sans">
+                        {new Date(p.fechaCreacion).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td className="px-6 py-5 text-center font-black text-flavis-gold font-sans">
+                      S/ {p.montoTotal.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-5 text-right rounded-r-2xl space-x-3 font-sans">
+                      <button onClick={() => {setSelectedOrder(p); setIsDetailOpen(true);}} className="text-[10px] font-black uppercase text-flavis-blue/80 dark:text-white/80 hover:text-flavis-gold transition-all border-b-2 border-current">Detalle</button>
+                      <button onClick={() => {setSelectedVoucher(p.comprobanteUrl); setIsVoucherOpen(true);}} className="text-[10px] font-black uppercase text-flavis-gold hover:text-flavis-gold/80 transition-all border-b-2 border-current">Ver Pago</button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {/* --- PAGINACIÓN PEDIDOS --- */}
+          {totalPagesOrders > 1 && (
+            <div className="flex justify-center gap-2 mt-8">
+              {[...Array(totalPagesOrders)].map((_, i) => (
+                <button key={i} onClick={() => setCurrentPageOrders(i + 1)} className={`w-8 h-8 rounded-full font-bold text-[10px] transition-all ${currentPageOrders === i + 1 ? 'bg-flavis-gold text-white shadow-lg scale-110' : 'bg-white dark:bg-white/5 text-flavis-blue/40 border border-flavis-blue/5'}`}>
+                    {i + 1}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
       <div className="h-20"></div>

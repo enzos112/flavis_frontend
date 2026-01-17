@@ -5,23 +5,20 @@ import OrderForm from './components/OrderForm';
 import Login from './components/Login';
 import Intranet from './components/Intranet';
 
+
 function App() {
   const [cookies, setCookies] = useState([]);
   const [cart, setCart] = useState({});
   
-  // SISTEMA DE PESTAÑAS: 'form', 'login', 'admin'
   const [view, setView] = useState('form');
   const [isAdmin, setIsAdmin] = useState(false);
-
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [lockTimeRemaining, setLockTimeRemaining] = useState(0);
-
   const [lockLevel, setLockLevel] = useState(() => parseInt(localStorage.getItem('flavis_lock_level') || '0'));
   const [formErrors, setFormErrors] = useState({});
   const [isShaking, setIsShaking] = useState(false);
 
-  // 1. Estado actualizado con nombres y apellidos por separado
   const [formData, setFormData] = useState({ 
     nombres: '', 
     apellidos: '', 
@@ -32,49 +29,52 @@ function App() {
   });
   
   const [selectedCookie, setSelectedCookie] = useState(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // NUEVO: Estado para abrir el modal de detalle
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); 
   const [loading, setLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false); 
-  const [preVenta, setPreVenta] = useState(null);
+  const [preVenta, setPreVenta] = useState(null); 
   const [isExistingCustomer, setIsExistingCustomer] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
-  
-  // Modales del sistema
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showOrderSuccessModal, setShowOrderSuccessModal] = useState(false); 
   const [errorModal, setErrorModal] = useState({ show: false, message: '' });
   const [customerNameForModal, setCustomerNameForModal] = useState(''); 
+  const isClosed = !preVenta || preVenta.activo === false || preVenta.isClosed === true; 
+  // 1. EFECTO DE CARGA INICIAL 
+  useEffect(() => {
+    api.get('/preventas/activa')
+      .then(res => {
+        const pv = res.data;
+        if (pv) {
+          if (pv.activo === false || pv.activo === 0) {
+            pv.isClosed = true;
+          } else {
+            const ahora = new Date();
+            const fin = new Date(pv.fechaCierre);
+            const stockAgotado = Number(pv.stockActual) >= Number(pv.stockMaximo);
+            const fechaExpirada = ahora > fin;
+            
+            pv.isClosed = fechaExpirada || stockAgotado;
+          }
+          console.log("📊 DEBUG STOCK:", { 
+            id: pv.id, 
+            vendidas: pv.stockActual, 
+            limiteMax: pv.stockMaximo,
+            tipoVendidas: typeof pv.stockActual,
+            tipoMax: typeof pv.stockMaximo
+          });
+        }
+        setPreVenta(pv);
+      })
+      .catch(err => {
+        console.warn("Sin campaña activa o servidor offline.");
+        setPreVenta(null);
+      });
 
-  // 1. EFECTO DE CARGA INICIAL (Corregido Punto 1: Sincronización)
-useEffect(() => {
-  api.get('/preventas/activa')
-    .then(res => {
-      const pv = res.data;
-      if (pv) {
-        const ahora = new Date();
-        const fin = new Date(pv.fechaCierre);
-        
-        // CORRECCIÓN PUNTO 1: Validación ultra-estricta de stock
-        // Si el stock actual es igual o mayor al máximo (y el máximo es > 0), se cierra.
-        const stockAgotado = pv.stockMaximo > 0 && (pv.stockActual >= pv.stockMaximo);
-        const fechaExpirada = ahora > fin;
-
-        pv.isClosed = fechaExpirada || stockAgotado;
-        
-        // Log para que tú mismo verifiques en consola si el stock está llegando bien
-        console.log("Estado Pre-Venta:", { stockAgotado, fechaExpirada, total: pv.isClosed });
-      }
-      setPreVenta(pv);
-    })
-    .catch(err => {
-      console.warn("Servidor fuera de línea o sin campaña activa.");
-      setPreVenta(null); 
-    });
-
-  api.get('/cookies/activas')
-    .then(res => setCookies(res.data))
-    .catch(err => setCookies([]));
-}, []);
+    api.get('/cookies/activas')
+      .then(res => setCookies(res.data))
+      .catch(err => setCookies([]));
+  }, []);
 
   useEffect(() => {
     const savedData = localStorage.getItem('flavis_temp_form');
@@ -89,7 +89,7 @@ useEffect(() => {
     localStorage.setItem('flavis_temp_form', JSON.stringify(formData));
   }, [formData]);
 
-  // 2. Temporizador Pro (Fase 2): Resetear nivel de bloqueo si ya pasó mucho tiempo
+  // 2. Temporizador (Fase 2): Resetear nivel de bloqueo si ya pasó mucho tiempo
   useEffect(() => {
     const expiration = localStorage.getItem('flavis_lock_until');
     if (expiration) {
@@ -101,7 +101,6 @@ useEffect(() => {
         setIsLocked(true);
         setLockTimeRemaining(remaining);
       } else {
-        // PRO: Si el bloqueo expiró hace más de 10 minutos, reseteamos el nivel a 0
         if (now > expirationTime + (600 * 1000)) {
           setLockLevel(0);
           localStorage.setItem('flavis_lock_level', '0');
@@ -131,7 +130,6 @@ useEffect(() => {
     return () => clearInterval(timer);
   }, [isLocked, lockTimeRemaining]);
 
-  // --- LÓGICA DE FORMATEO AESTHETIC ---
   const formatCierre = (dateString) => {
     if (!dateString) return "Cargando...";
     const date = new Date(dateString);
@@ -241,8 +239,7 @@ useEffect(() => {
 
   const total = cookies.reduce((acc, cookie) => acc + (cookie.precio * (cart[cookie.id] || 0)), 0);
 
-  // 2. FUNCIÓN handleOrder (Corregido Punto 3: Temporizador Inmediato)
-const handleOrder = async () => {
+  const handleOrder = async () => {
     const { celular, nombres, apellidos, comprobanteUrl, aceptoCondiciones } = formData;
     const totalQuantity = Object.values(cart).reduce((a, b) => a + b, 0);
 
@@ -279,28 +276,28 @@ const handleOrder = async () => {
     }
 
     const pedido = {
+      guardarDatos: formData.guardarDatos,
       cliente: { nombre: nombres, apellido: apellidos, celular: celular, guardarDatos: formData.guardarDatos },
       montoTotal: total,
-      comprobanteUrl,
-      detalles: Object.keys(cart).filter(id => cart[id] > 0).map(id => ({
-        cookie: { id: parseInt(id) },
-        cantidad: cart[id],
-        precioUnitario: cookies.find(c => c.id === parseInt(id)).precio
-      }))
+      comprobanteUrl: comprobanteUrl,
+      detalles: Object.entries(cart)
+        .filter(([_, qty]) => qty > 0)
+        .map(([id, qty]) => ({
+          cookie: { id: parseInt(id) },
+          cantidad: qty,
+          precioUnitario: cookies.find(c => c.id === parseInt(id)).precio
+        }))
     };
 
     try {
       setLoading(true);
       await api.post('/pedidos', pedido);
       
-      // Capturamos el primer nombre para el modal antes de borrar
       const firstName = nombres.trim().split(' ')[0];
       setCustomerNameForModal(firstName);
       
-      // DISPARAMOS EL MODAL
       setShowOrderSuccessModal(true);
 
-      // LIMPIEZA
       setLockLevel(0);
       localStorage.removeItem('flavis_lock_level');
       localStorage.removeItem('flavis_temp_form');
@@ -356,69 +353,82 @@ const handleOrder = async () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4">
-        {!preVenta || preVenta.isClosed ? (
-          <div className="mt-[5px] animate-in">
-             <OrderForm 
-                preVenta={preVenta} 
-                formData={formData} 
-                setFormData={setFormData}
-                selectedCookie={selectedCookie}
-                isDetailModalOpen={isDetailModalOpen}
-                setIsDetailModalOpen={setIsDetailModalOpen}
-             />
-          </div>
-        ) : (
-          <>
-            <section className="mt-12 mb-20 animate-in">
-              <h2 className="text-3xl text-center text-flavis-gold mb-12 font-secondary font-bold tracking-tight uppercase">
-                Elige tus favoritas
-              </h2>
-              <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-6 scrollbar-hide px-2 py-10 -my-10">
-                {cookies.map(cookie => (
-                  <div key={cookie.id} className="min-w-[280px] md:min-w-[calc(25%-18px)] flex-shrink-0 snap-start">
-                    <CookieCard 
-                      cookie={cookie} 
-                      quantity={cart[cookie.id] || 0} 
-                      onUpdate={(delta) => updateQuantity(cookie.id, delta)} 
-                      onOpenModal={(c) => { 
-                        setSelectedCookie(c); 
-                        setIsDetailModalOpen(true); 
-                      }} 
-                    />
-                  </div>
-                ))}
-              </div>
-            </section>
+  {isClosed ? (
+    /* --- VISTA: PRE-VENTA CERRADA --- */
+    <div className="mt-[5px] animate-in">
+      <OrderForm 
+        isClosed={isClosed} // <--- PASAMOS EL VALOR
+        preVenta={preVenta} 
+        formData={formData} 
+        setFormData={setFormData}
+        selectedCookie={selectedCookie}
+        isDetailModalOpen={isDetailModalOpen}
+        setIsDetailModalOpen={setIsDetailModalOpen}
+      />
+    </div>
+  ) : (
+    /* --- VISTA: PRE-VENTA ABIERTA --- */
+    <>
+      <section className="mt-12 mb-20 animate-in">
+        <h2 className="text-xl sm:text-2xl md:text-3xl text-center text-flavis-gold mb-8 sm:mb-12 font-secondary font-bold tracking-tight uppercase px-4 break-words">
+          Elige tus favoritas
+        </h2>
 
-            <OrderForm 
-              formData={formData} 
-              setFormData={setFormData} 
-              onFileUpload={handleFileUpload} 
-              onPhoneBlur={handlePhoneBlur} 
-              isExistingCustomer={isExistingCustomer} 
-              qrUrl={preVenta?.qrUrl?.includes('demo') ? null : preVenta?.qrUrl}
-              previewUrl={previewUrl} 
-              onRemoveFile={handleRemoveFile} 
-              loading={loading} 
-              isSearching={isSearching}
-              preVenta={preVenta} 
-              cart={cart} 
-              cookies={cookies} 
-              total={total} 
-              handleOrder={handleOrder}
-              formErrors={formErrors} 
-              isShaking={isShaking}
-              selectedCookie={selectedCookie}
-              isDetailModalOpen={isDetailModalOpen}
-              setIsDetailModalOpen={setIsDetailModalOpen}
-              // --- ESTAS TRES LÍNEAS SON LA CORRECCIÓN ---
-              successOrder={showOrderSuccessModal} // Nombre corregido
-              setSuccessOrder={setShowOrderSuccessModal} // Nombre corregido
-              successName={customerNameForModal} // Prop añadida para no perder el nombre
-            />
-          </>
-        )}
-      </main>
+        <div className="relative">
+          
+          <div className="absolute left-0 top-0 bottom-0 w-4 sm:w-12 bg-gradient-to-r from-[#326371] to-transparent z-10 pointer-events-none lg:hidden" />
+          <div className="absolute right-0 top-0 bottom-0 w-4 sm:w-12 bg-gradient-to-l from-[#326371] to-transparent z-10 pointer-events-none lg:hidden" />
+
+          <div className="flex overflow-x-auto lg:overflow-x-visible snap-x snap-mandatory gap-6 pb-10 scrollbar-hide px-8 lg:px-0 lg:justify-center py-10 -my-10">
+            {cookies.map(cookie => (
+              <div 
+                key={cookie.id} 
+                className="w-[280px] sm:w-[300px] flex-shrink-0 snap-start transition-transform hover:scale-[1.02]"
+              >
+                <CookieCard 
+                  cookie={cookie} 
+                  quantity={cart[cookie.id] || 0} 
+                  onUpdate={(delta) => updateQuantity(cookie.id, delta)} 
+                  onOpenModal={(c) => { 
+                    setSelectedCookie(c); 
+                    setIsDetailModalOpen(true); 
+                  }} 
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <OrderForm 
+        isClosed={isClosed} 
+        formData={formData} 
+        setFormData={setFormData} 
+        onFileUpload={handleFileUpload} 
+        onPhoneBlur={handlePhoneBlur} 
+        isExistingCustomer={isExistingCustomer} 
+        qrUrl={preVenta?.qrUrl}
+        previewUrl={previewUrl} 
+        onRemoveFile={handleRemoveFile} 
+        loading={loading} 
+        isSearching={isSearching}
+        preVenta={preVenta} 
+        cart={cart} 
+        cookies={cookies} 
+        total={total} 
+        handleOrder={handleOrder}
+        formErrors={formErrors} 
+        isShaking={isShaking}
+        selectedCookie={selectedCookie}
+        isDetailModalOpen={isDetailModalOpen}
+        setIsDetailModalOpen={setIsDetailModalOpen}
+        successOrder={showOrderSuccessModal} 
+        setSuccessOrder={setShowOrderSuccessModal} 
+        successName={customerNameForModal} 
+      />
+    </>
+  )}
+</main>
 
       {errorModal.show && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[100] flex items-center justify-center p-4">

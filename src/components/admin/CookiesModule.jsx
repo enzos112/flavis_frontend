@@ -6,15 +6,16 @@ const CookiesModule = () => {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const cookiesPerPage = 6;
   
-  // ESTADO PARA BUSCADOR
   const [searchTerm, setSearchTerm] = useState("");
   
   const [confirmModal, setConfirmModal] = useState({ show: false, id: null });
   const [alertModal, setAlertModal] = useState({ show: false, message: '', title: '' });
 
   const [newCookie, setNewCookie] = useState({
-    nombre: '', descripcion: '', precio: '', imagenUrl: '', activo: true
+    nombre: '', descripcion: '', precio: '', imagenUrl: '', activo: true, stockActual: 0
   });
   const [uploadingImg, setUploadingImg] = useState(false);
 
@@ -27,13 +28,22 @@ const CookiesModule = () => {
     } catch (err) { console.error("Error al cargar galletas", err); }
   };
 
-  // Lógica de métrica
   const activeCookiesCount = cookies.filter(c => c.activo).length;
 
-  // Lógica de filtrado por buscador
   const filteredCookies = cookies.filter(c => 
     c.nombre.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalPages = Math.ceil(filteredCookies.length / cookiesPerPage);
+
+  const currentCookies = filteredCookies.slice(
+    (currentPage - 1) * cookiesPerPage,
+    currentPage * cookiesPerPage
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const solicitarEliminacion = (id) => {
     setConfirmModal({ show: true, id });
@@ -45,12 +55,12 @@ const CookiesModule = () => {
     try {
       await api.delete(`/cookies/${id}`);
       cargarCookies();
-      setAlertModal({ show: true, title: "¡Éxito!", message: "La galleta ha sido eliminada del sistema." });
+      setAlertModal({ show: true, title: "¡Éxito!", message: "Galleta eliminada correctamente." });
     } catch (err) {
       setAlertModal({ 
         show: true, 
-        title: "No se puede eliminar", 
-        message: "Esta galleta ya tiene pedidos asociados. Por seguridad, te recomendamos usar la opción 'Ocultar' en lugar de borrarla." 
+        title: "Acción Protegida", 
+        message: "No podemos eliminar esta galleta porque aparece en pedidos de tus clientes. Usa el botón 'Ocultar' para que ya no aparezca en el catálogo sin borrar tu historial de ventas." 
       });
     }
   };
@@ -70,12 +80,14 @@ const CookiesModule = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     const precioNum = parseFloat(newCookie.precio);
+    
     if (isNaN(precioNum) || precioNum <= 0) {
       setAlertModal({ 
         show: true, 
         title: "Precio Inválido", 
-        message: "Por favor, ingresa un precio válido y mayor a cero." 
+        message: "Por favor, ingresa un precio válido." 
       });
       return;
     }
@@ -85,19 +97,36 @@ const CookiesModule = () => {
       setAlertModal({ 
         show: true, 
         title: "Formato de Precio", 
-        message: "Los céntimos deben ser en escalas de 10 (ej: .10, .20, .50). No se permiten valores como .23 o .29." 
+        message: "Los céntimos deben ser en escalas de 10 (ej: .10, .50)." 
       });
       return;
     }
     
+    const cookieData = {
+      ...newCookie,
+      precio: precioNum,
+      stockActual: parseInt(newCookie.stockActual) || 0,
+      descripcion: newCookie.descripcion || "" 
+    };
+
     try {
       setLoading(true);
-      if (editingId) await api.put(`/cookies/${editingId}`, newCookie);
-      else await api.post('/cookies', newCookie);
+      if (editingId) {
+        await api.put(`/cookies/${editingId}`, cookieData);
+        setAlertModal({ show: true, title: "¡Actualizado!", message: "Galleta editada con éxito." });
+      } else {
+        await api.post('/cookies', cookieData);
+        setAlertModal({ show: true, title: "¡Creado!", message: "Nueva galleta añadida al catálogo." });
+      }
       cerrarFormulario();
       cargarCookies();
     } catch (err) {
-      setAlertModal({ show: true, title: "Error", message: "Hubo un problema al guardar los datos." });
+      console.error("Error detallado:", err.response?.data || err.message);
+      setAlertModal({ 
+        show: true, 
+        title: "Error al guardar", 
+        message: "Verifica que todos los campos estén llenos y que la imagen haya subido correctamente." 
+      });
     } finally { setLoading(false); }
   };
 
@@ -123,6 +152,8 @@ const CookiesModule = () => {
         setAlertModal({ show: true, title: "Error", message: "No se pudo cambiar el estado de visibilidad." });
     }
   };
+
+  
 
   return (
     <div className="animate-in relative font-sans"> 
@@ -163,24 +194,19 @@ const CookiesModule = () => {
       {showForm && (
         <div className="bg-white dark:bg-flavis-card-dark p-10 rounded-[3rem] shadow-xl border border-[#326371]/5 dark:border-white/5 mb-12 max-w-2xl animate-in transition-colors">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <h3 className="text-xl font-main font-bold text-flavis-blue dark:text-white italic">{editingId ? 'Editando Galleta' : 'Nueva Galleta'}</h3>
+            <h3 className="text-xl font-sans font-black text-flavis-blue dark:text-white uppercase tracking-tight">
+              {editingId ? 'Editando Galleta' : 'Nueva Galleta'}
+            </h3>
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs uppercase font-bold text-flavis-blue dark:text-white/40 mb-2 ml-2 tracking-widest opacity-60">Nombre</label>
-                <input required type="text" placeholder="Ej: Choco Chips" className="w-full bg-[#f8f9f5] dark:bg-flavis-dark border border-[#326371]/10 dark:border-white/10 p-4 rounded-2xl outline-none focus:border-flavis-gold transition-all text-flavis-blue dark:text-white placeholder-flavis-blue/40 dark:placeholder-white/10 font-bold" 
+                <label className="block text-[10px] uppercase font-black text-flavis-blue/70 dark:text-white/70 mb-2 ml-2 tracking-widest">Nombre</label>
+                <input required type="text" placeholder="Ej: Choco Chips" className="w-full bg-[#f8f9f5] dark:bg-flavis-dark border border-[#326371]/20 dark:border-white/20 p-4 rounded-2xl outline-none focus:border-flavis-gold transition-all text-flavis-blue dark:text-white font-bold" 
                   value={newCookie.nombre} onChange={e => setNewCookie({...newCookie, nombre: e.target.value})} />
               </div>
               <div>
-                <label className="block text-xs uppercase font-bold text-flavis-blue dark:text-white/40 mb-2 ml-2 tracking-widest opacity-60">Precio (S/)</label>
-                <input 
-                    required 
-                    type="number" 
-                    step="0.10" 
-                    placeholder="0.00" 
-                    className="w-full bg-[#f8f9f5] dark:bg-flavis-dark border border-[#326371]/10 dark:border-white/10 p-4 rounded-2xl outline-none focus:border-flavis-gold transition-all text-flavis-blue dark:text-white placeholder-flavis-blue/40 dark:placeholder-white/10 font-bold"
-                    value={newCookie.precio} 
-                    onChange={e => setNewCookie({...newCookie, precio: e.target.value})} 
-                />
+                <label className="block text-[10px] uppercase font-black text-flavis-blue/70 dark:text-white/70 mb-2 ml-2 tracking-widest">Precio (S/)</label>
+                <input required type="number" step="0.10" className="w-full bg-[#f8f9f5] dark:bg-flavis-dark border border-[#326371]/20 dark:border-white/20 p-4 rounded-2xl outline-none focus:border-flavis-gold transition-all text-flavis-blue dark:text-white font-bold"
+                  value={newCookie.precio} onChange={e => setNewCookie({...newCookie, precio: e.target.value})} />
               </div>
             </div>
             
@@ -217,15 +243,15 @@ const CookiesModule = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredCookies.map(cookie => (
+        {currentCookies.map(cookie => (
           <div key={cookie.id} className={`bg-white dark:bg-flavis-card-dark p-6 rounded-[2.5rem] border border-[#326371]/5 dark:border-white/5 shadow-sm transition-all group ${!cookie.activo ? 'opacity-60 grayscale-[0.5]' : ''}`}>
-            <div className="w-full h-48 bg-[#f8f9f5] dark:bg-flavis-dark rounded-[2rem] mb-6 overflow-hidden relative transition-colors">
-              <img src={cookie.imagenUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={cookie.nombre} />
-            </div>
+            <div className="w-full h-48 bg-[#f8f9f5] dark:bg-flavis-dark rounded-[2rem] mb-6 overflow-hidden relative">
+                <img src={cookie.imagenUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={cookie.nombre} />
+          </div>
             <div className="flex justify-between items-start mb-2">
-              <h3 className="font-main font-bold text-xl text-flavis-blue dark:text-white italic transition-colors">{cookie.nombre}</h3>
-              <p className="text-flavis-gold font-bold transition-colors">S/ {cookie.precio.toFixed(2)}</p>
-            </div>
+              <h3 className="font-sans font-black text-lg text-flavis-blue dark:text-white uppercase tracking-tight">{cookie.nombre}</h3>
+              <p className="text-flavis-gold font-black font-sans">S/ {cookie.precio.toFixed(2)}</p>
+          </div>
             <div className="flex flex-col gap-2 mt-4 font-sans">
                 <div className="flex gap-2">
                     <button onClick={() => prepararEdicion(cookie)} className="flex-1 py-2 bg-[#326371]/10 dark:bg-white/5 text-[#326371] dark:text-white/60 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:dark:bg-white/10 transition-colors">Editar</button>
@@ -239,6 +265,42 @@ const CookiesModule = () => {
         ))}
       </div>
 
+      {/* --- CONTROLES DE PAGINACIÓN --- */}
+      {!showForm && totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-12 pb-10">
+          <button 
+            disabled={currentPage === 1} 
+            onClick={() => { setCurrentPage(prev => prev - 1); window.scrollTo({top: 0, behavior: 'smooth'}); }} 
+            className="p-2 text-flavis-blue/40 dark:text-white/20 disabled:opacity-10 transition-opacity font-sans font-bold"
+          >
+            « Atrás
+          </button>
+          
+          <div className="flex gap-2">
+            {[...Array(totalPages)].map((_, i) => (
+              <button 
+                key={i} 
+                onClick={() => { setCurrentPage(i + 1); window.scrollTo({top: 0, behavior: 'smooth'}); }} 
+                className={`w-10 h-10 rounded-full font-black text-xs transition-all ${
+                  currentPage === i + 1 
+                    ? 'bg-flavis-gold text-white shadow-lg scale-110' 
+                    : 'bg-white dark:bg-flavis-card-dark text-flavis-blue/70 dark:text-white/50 border border-flavis-blue/10'
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+
+          <button 
+            disabled={currentPage === totalPages} 
+            onClick={() => { setCurrentPage(prev => prev + 1); window.scrollTo({top: 0, behavior: 'smooth'}); }} 
+            className="p-2 text-flavis-blue/40 dark:text-white/20 disabled:opacity-10 transition-opacity font-sans font-bold"
+          >
+            Sig. »
+          </button>
+        </div>
+      )}
       {confirmModal.show && (
         <div className="fixed inset-0 bg-black/60 dark:bg-flavis-dark/90 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
           <div className="bg-[#eef1e6] dark:bg-flavis-card-dark p-10 rounded-[3rem] max-w-sm w-full text-center shadow-2xl animate-in font-sans transition-colors border border-transparent dark:border-white/5">
