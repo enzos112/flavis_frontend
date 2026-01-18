@@ -41,6 +41,17 @@ function App() {
   const [errorModal, setErrorModal] = useState({ show: false, message: '' });
   const [customerNameForModal, setCustomerNameForModal] = useState(''); 
   const isClosed = !preVenta || preVenta.activo === false || preVenta.isClosed === true; 
+
+  // --- DETECTAR RUTA SECRETA PARA LOGIN ---
+  useEffect(() => {
+    const path = window.location.pathname;
+    
+    // Si la URL es flavis-cookies.vercel.app/acceso-flavis-2026 o /login
+    if (path === '/acceso-flavis-2026' || path === '/login') {
+      setView('login');
+    }
+  }, []);
+
   // 1. EFECTO DE CARGA INICIAL 
   useEffect(() => {
     api.get('/preventas/activa')
@@ -457,16 +468,6 @@ function App() {
           </div>
         </div>
       )}
-      
-      <button 
-        onClick={() => setView('login')}
-        className="fixed bottom-6 left-6 z-[100] w-12 h-12 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full flex items-center justify-center transition-all shadow-lg backdrop-blur-sm group"
-        title="Acceso Intranet"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white/40 group-hover:text-flavis-gold transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-      </button>
     </div>
   );
 }
