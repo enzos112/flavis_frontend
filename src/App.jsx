@@ -19,6 +19,7 @@ function App() {
   const [lockLevel, setLockLevel] = useState(() => parseInt(localStorage.getItem('flavis_lock_level') || '0'));
   const [formErrors, setFormErrors] = useState({});
   const [isShaking, setIsShaking] = useState(false);
+  const [isAppReady, setIsAppReady] = useState(false);
 
   const [formData, setFormData] = useState({ 
     nombres: '', 
@@ -42,6 +43,16 @@ function App() {
   const [customerNameForModal, setCustomerNameForModal] = useState(''); 
   const isClosed = !preVenta || preVenta.activo === false || preVenta.isClosed === true; 
 
+
+  useEffect(() => {
+    const VERSION = "2.5"; 
+    if (localStorage.getItem('flavis_v') !== VERSION) {
+      localStorage.clear();
+      localStorage.setItem('flavis_v', VERSION);
+      window.location.reload();
+    }
+  }, []);
+  
   // --- DETECTAR RUTA SECRETA PARA LOGIN ---
   useEffect(() => {
     const path = window.location.pathname;
@@ -52,40 +63,35 @@ function App() {
     }
   }, []);
 
-  // 1. EFECTO DE CARGA INICIAL 
   useEffect(() => {
-    api.get('/preventas/activa')
-      .then(res => {
-        const pv = res.data;
-        if (pv) {
-          if (pv.activo === false || pv.activo === 0) {
-            pv.isClosed = true;
-          } else {
-            const ahora = new Date();
-            const fin = new Date(pv.fechaCierre);
-            const stockAgotado = Number(pv.stockActual) >= Number(pv.stockMaximo);
-            const fechaExpirada = ahora > fin;
-            
-            pv.isClosed = fechaExpirada || stockAgotado;
-          }
-          console.log("📊 DEBUG STOCK:", { 
-            id: pv.id, 
-            vendidas: pv.stockActual, 
-            limiteMax: pv.stockMaximo,
-            tipoVendidas: typeof pv.stockActual,
-            tipoMax: typeof pv.stockMaximo
-          });
+    Promise.all([
+      api.get('/preventas/activa').catch(() => null),
+      api.get('/cookies/activas').catch(() => [])
+    ]).then(([pvRes, cookiesRes]) => {
+      // Procesar Pre-Venta
+      if (pvRes?.data) {
+        const pv = pvRes.data;
+        if (pv.activo === false || pv.activo === 0) {
+          pv.isClosed = true;
+        } else {
+          const ahora = new Date();
+          const fin = new Date(pv.fechaCierre);
+          const stockAgotado = Number(pv.stockActual) >= Number(pv.stockMaximo);
+          const fechaExpirada = ahora > fin;
+          pv.isClosed = fechaExpirada || stockAgotado;
         }
         setPreVenta(pv);
-      })
-      .catch(err => {
+      } else {
         console.warn("Sin campaña activa o servidor offline.");
         setPreVenta(null);
-      });
+      }
 
-    api.get('/cookies/activas')
-      .then(res => setCookies(res.data))
-      .catch(err => setCookies([]));
+      if (cookiesRes?.data) {
+        setCookies(cookiesRes.data);
+      }
+    }).finally(() => {
+      setIsAppReady(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -351,6 +357,18 @@ function App() {
     setAdminUser(null);
     setView('form');
   };
+
+  if (!isAppReady) {
+    return (
+      <div className="min-h-screen bg-[#326371] flex flex-col items-center justify-center p-4">
+        <img src="/Logo-Flavis.png" alt="Cargando..." className="w-48 md:w-64 animate-pulse mb-8" />
+        <div className="w-10 h-10 border-4 border-flavis-gold border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-white/40 font-secondary text-[10px] uppercase tracking-[0.3em] mt-8 font-bold">
+          Preparando el horno...
+        </p>
+      </div>
+    );
+  }
 
   if (view === 'login') return <Login onLogin={handleLogin} onBack={() => setView('form')} />;
   if (view === 'admin' && isAdmin) return <Intranet onLogout={handleLogout} />;
