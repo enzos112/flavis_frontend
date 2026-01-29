@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import api from './services/api';
 import CookieCard from './components/CookieCard';
 import OrderForm from './components/OrderForm';
@@ -374,6 +375,7 @@ function App() {
   if (view === 'admin' && isAdmin) return <Intranet onLogout={handleLogout} />;
   return (
     <div className="min-h-screen bg-[#326371] pb-20 px-4 md:px-10 relative">
+      <Analytics />
       {isLocked && (
         <div className="fixed inset-0 bg-flavis-blue/95 backdrop-blur-md z-[300] flex items-center justify-center p-4 animate-in">
           <div className="bg-[#eef1e6] p-10 rounded-[3rem] max-w-sm w-full text-center shadow-2xl border-2 border-flavis-gold font-secondary">
