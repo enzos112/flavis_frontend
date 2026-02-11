@@ -5,10 +5,22 @@ import OrderForm from './components/OrderForm';
 import Login from './components/Login';
 import Intranet from './components/Intranet';
 
+const initialState = {
+  nombres: '',
+  apellidos: '',
+  celular: '',
+  comprobanteUrl: '',
+  guardarDatos: false,
+  aceptoCondiciones: false,
+  tipoEntrega: 'RECOJO',
+  direccion: { distrito: '', detalle: '', referencia: '' }
+};
 
 function App() {
   const [cookies, setCookies] = useState([]);
-  const [cart, setCart] = useState({});
+  const [packs, setPacks] = useState([]);
+  const [cart, setCart] = useState({}); 
+  const [formData, setFormData] = useState(initialState);
   
   const [view, setView] = useState('form');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -20,15 +32,7 @@ function App() {
   const [formErrors, setFormErrors] = useState({});
   const [isShaking, setIsShaking] = useState(false);
   const [isAppReady, setIsAppReady] = useState(false);
-
-  const [formData, setFormData] = useState({ 
-    nombres: '', 
-    apellidos: '', 
-    celular: '', 
-    comprobanteUrl: '', 
-    guardarDatos: false, 
-    aceptoCondiciones: false 
-  });
+  const [successDeliveryType, setSuccessDeliveryType] = useState('RECOJO');
   
   const [selectedCookie, setSelectedCookie] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); 
@@ -42,7 +46,6 @@ function App() {
   const [errorModal, setErrorModal] = useState({ show: false, message: '' });
   const [customerNameForModal, setCustomerNameForModal] = useState(''); 
   const isClosed = !preVenta || preVenta.activo === false || preVenta.isClosed === true; 
-
 
   useEffect(() => {
     const VERSION = "2.5"; 
@@ -66,9 +69,10 @@ function App() {
   useEffect(() => {
     Promise.all([
       api.get('/preventas/activa').catch(() => null),
-      api.get('/cookies/activas').catch(() => [])
-    ]).then(([pvRes, cookiesRes]) => {
-      // Procesar Pre-Venta
+      api.get('/cookies/activas').catch(() => []),
+      api.get('/packs').catch(() => []) // NUEVO: Carga de packs
+    ]).then(([pvRes, cookiesRes, packsRes]) => {
+      // --- Procesar Pre-Venta (Mismo bloque) ---
       if (pvRes?.data) {
         const pv = pvRes.data;
         if (pv.activo === false || pv.activo === 0) {
@@ -82,13 +86,13 @@ function App() {
         }
         setPreVenta(pv);
       } else {
-        console.warn("Sin campaña activa o servidor offline.");
         setPreVenta(null);
       }
 
-      if (cookiesRes?.data) {
-        setCookies(cookiesRes.data);
-      }
+      // --- Procesar Catálogo ---
+      if (cookiesRes?.data) setCookies(cookiesRes.data);
+      if (packsRes?.data) setPacks(packsRes.data.filter(p => p.activo));
+      
     }).finally(() => {
       setIsAppReady(true);
     });
@@ -197,8 +201,11 @@ function App() {
     }
   }, [formData.celular, isExistingCustomer]);
 
-  const updateQuantity = (id, delta) => {
-    setCart(prev => ({ ...prev, [id]: Math.max(0, (prev[id] || 0) + delta) }));
+  const updateQuantity = (key, delta) => {
+    setCart(prev => ({ 
+      ...prev, 
+      [key]: Math.max(0, (prev[key] || 0) + delta) 
+    }));
   };
 
   const hasTooManyConsecutive = (str) => /(.)\1{4,}/.test(str);
@@ -267,80 +274,98 @@ function App() {
     setPreviewUrl(null);
   };
 
-  const total = cookies.reduce((acc, cookie) => acc + (cookie.precio * (cart[cookie.id] || 0)), 0);
+  const totalCookies = cookies.reduce((acc, c) => acc + (c.precio * (cart[`c_${c.id}`] || 0)), 0);
+  const totalPacks = packs.reduce((acc, p) => acc + (p.precio * (cart[`p_${p.id}`] || 0)), 0);
+  const total = totalCookies + totalPacks;
 
-  const handleOrder = async () => {
-    const { celular, nombres, apellidos, comprobanteUrl, aceptoCondiciones } = formData;
-    const totalQuantity = Object.values(cart).reduce((a, b) => a + b, 0);
+  const handleOrder = async (logisticaData) => {
+  const { celular, nombres, apellidos, comprobanteUrl, aceptoCondiciones, guardarDatos } = formData;
+  const { tipoEntrega, costoEnvio, direccion } = logisticaData;
 
-    if (preVenta && (preVenta.stockActual + totalQuantity > preVenta.stockMaximo)) {
-      setErrorModal({ show: true, message: '¡Lo sentimos! Ya no queda stock suficiente.' });
-      return;
-    }
+  const cookiesFromPacks = packs.reduce((acc, p) => acc + ((cart[`p_${p.id}`] || 0) * 4), 0);
+  const cookiesIndividual = cookies.reduce((acc, c) => acc + (cart[`c_${c.id}`] || 0), 0);
+  const totalCookiesOrdered = cookiesIndividual + cookiesFromPacks;
 
-    const errors = {};
-    if (!nombres?.trim()) errors.nombres = true;
-    if (!apellidos?.trim()) errors.apellidos = true;
-    if (!celular || celular.length < 9) errors.celular = true;
-    if (!comprobanteUrl) errors.comprobanteUrl = true;
-    if (!aceptoCondiciones) errors.aceptoCondiciones = true;
-    if (total === 0) errors.total = true;
+  if (preVenta && (preVenta.stockActual + totalCookiesOrdered > preVenta.stockMaximo)) {
+    setErrorModal({ show: true, message: '¡Lo sentimos! No hay stock suficiente para esta combinación.' });
+    return;
+  }
 
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      setIsShaking(true);
-      setTimeout(() => setIsShaking(false), 500);
-      const newAttempts = failedAttempts + 1;
-      if (newAttempts >= 4) {
-        const nextLevel = lockLevel + 1;
-        const seconds = nextLevel === 1 ? 30 : nextLevel === 2 ? 60 : 120;
-        const expiration = Date.now() + (seconds * 1000);
-        localStorage.setItem('flavis_lock_until', expiration.toString());
-        localStorage.setItem('flavis_lock_level', nextLevel.toString());
-        setLockLevel(nextLevel);
-        setLockTimeRemaining(seconds);
-        setIsLocked(true);
-        setFailedAttempts(0);
-      } else { setFailedAttempts(newAttempts); }
-      return;
-    }
+  const errors = {};
+  if (!nombres?.trim()) errors.nombres = true;
+  if (!apellidos?.trim()) errors.apellidos = true;
+  if (!celular || celular.length < 9) errors.celular = true;
+  if (!comprobanteUrl) errors.comprobanteUrl = true;
+  if (!aceptoCondiciones) errors.aceptoCondiciones = true;
+  if (total === 0) errors.total = true;
 
-    const pedido = {
-      guardarDatos: formData.guardarDatos,
-      cliente: { nombre: nombres, apellido: apellidos, celular: celular, guardarDatos: formData.guardarDatos },
-      montoTotal: total,
-      comprobanteUrl: comprobanteUrl,
-      detalles: Object.entries(cart)
-        .filter(([_, qty]) => qty > 0)
-        .map(([id, qty]) => ({
-          cookie: { id: parseInt(id) },
+  if (Object.keys(errors).length > 0) {
+    setFormErrors(errors);
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 500);
+    return;
+  }
+
+  const detalles = Object.entries(cart)
+    .filter(([_, qty]) => qty > 0)
+    .map(([key, qty]) => {
+      const [type, id] = key.split('_'); 
+      const numericId = parseInt(id);
+
+      if (type === 'c') {
+        const item = cookies.find(c => c.id === numericId);
+        return {
+          cookie: { id: numericId },
           cantidad: qty,
-          precioUnitario: cookies.find(c => c.id === parseInt(id)).precio
-        }))
-    };
+          precioUnitario: item ? item.precio : 0,
+          esPack: false
+        };
+      } else {
+        const item = packs.find(p => p.id === numericId);
+        return {
+          pack: { id: numericId }, 
+          cantidad: qty,
+          precioUnitario: item ? item.precio : 0,
+          esPack: true 
+        };
+      }
+    });
 
-    try {
-      setLoading(true);
-      await api.post('/pedidos', pedido);
-      
-      const firstName = nombres.trim().split(' ')[0];
-      setCustomerNameForModal(firstName);
-      
-      setShowOrderSuccessModal(true);
-
-      setLockLevel(0);
-      localStorage.removeItem('flavis_lock_level');
-      localStorage.removeItem('flavis_temp_form');
-      setCart({});
-      setIsExistingCustomer(false);
-      setPreviewUrl(null);
-      setFormData({ nombres: '', apellidos: '', celular: '', comprobanteUrl: '', guardarDatos: false, aceptoCondiciones: false });
-      setFailedAttempts(0);
-      setFormErrors({});
-    } catch (err) {
-      setErrorModal({ show: true, message: 'Error al procesar el pedido.' });
-    } finally { setLoading(false); }
+  const pedido = {
+    guardarDatos: guardarDatos,
+    cliente: { nombre: nombres, apellido: apellidos, celular: celular },
+    tipoEntrega: tipoEntrega,
+    costoEnvio: costoEnvio,
+    direccion: direccion,
+    montoTotal: total + costoEnvio,
+    comprobanteUrl: comprobanteUrl,
+    detalles: detalles 
   };
+
+  try {
+    setLoading(true);
+    await api.post('/pedidos', pedido);
+    
+    setCustomerNameForModal(nombres);
+    setSuccessDeliveryType(tipoEntrega);
+    
+    setShowOrderSuccessModal(true);
+
+    setLockLevel(0);
+    localStorage.removeItem('flavis_lock_level');
+    localStorage.removeItem('flavis_temp_form');
+    setIsExistingCustomer(false);
+    setCart({});
+    setPreviewUrl(null);
+    setFormData(initialState); 
+
+  } catch (err) {
+    console.error("Error en API:", err);
+    setErrorModal({ show: true, message: 'Error al procesar el pedido. Verifica tu conexión o el comprobante.' });
+  } finally { 
+    setLoading(false); 
+  }
+};
 
   const handleLogin = (data) => {
     localStorage.setItem('token', data.token);
@@ -374,6 +399,7 @@ function App() {
   if (view === 'admin' && isAdmin) return <Intranet onLogout={handleLogout} />;
   return (
     <div className="min-h-screen bg-[#326371] pb-20 px-4 md:px-10 relative">
+      {/* --- MODAL DE BLOQUEO POR INTENTOS --- */}
       {isLocked && (
         <div className="fixed inset-0 bg-flavis-blue/95 backdrop-blur-md z-[300] flex items-center justify-center p-4 animate-in">
           <div className="bg-[#eef1e6] p-10 rounded-[3rem] max-w-sm w-full text-center shadow-2xl border-2 border-flavis-gold font-secondary">
@@ -400,85 +426,117 @@ function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4">
-  {isClosed ? (
-    /* --- VISTA: PRE-VENTA CERRADA --- */
-    <div className="mt-[5px] animate-in">
-      <OrderForm 
-        isClosed={isClosed} // <--- PASAMOS EL VALOR
-        preVenta={preVenta} 
-        formData={formData} 
-        setFormData={setFormData}
-        selectedCookie={selectedCookie}
-        isDetailModalOpen={isDetailModalOpen}
-        setIsDetailModalOpen={setIsDetailModalOpen}
-      />
-    </div>
-  ) : (
-    /* --- VISTA: PRE-VENTA ABIERTA --- */
-    <>
-      <section className="mt-12 mb-20 animate-in">
-        <h2 className="text-xl sm:text-2xl md:text-3xl text-center text-flavis-gold mb-8 sm:mb-12 font-secondary font-bold tracking-tight uppercase px-4 break-words">
-          Elige tus favoritas
-        </h2>
-
-        <div className="relative">
-          
-          <div className="absolute left-0 top-0 bottom-0 w-4 sm:w-12 bg-gradient-to-r from-[#326371] to-transparent z-10 pointer-events-none lg:hidden" />
-          <div className="absolute right-0 top-0 bottom-0 w-4 sm:w-12 bg-gradient-to-l from-[#326371] to-transparent z-10 pointer-events-none lg:hidden" />
-
-          <div className="flex overflow-x-auto lg:overflow-x-visible snap-x snap-mandatory gap-6 pb-10 scrollbar-hide px-8 lg:px-0 lg:justify-center py-10 -my-10">
-            {cookies.map(cookie => (
-              <div 
-                key={cookie.id} 
-                className="w-[280px] sm:w-[300px] flex-shrink-0 snap-start transition-transform hover:scale-[1.02]"
-              >
-                <CookieCard 
-                  cookie={cookie} 
-                  quantity={cart[cookie.id] || 0} 
-                  onUpdate={(delta) => updateQuantity(cookie.id, delta)} 
-                  onOpenModal={(c) => { 
-                    setSelectedCookie(c); 
-                    setIsDetailModalOpen(true); 
-                  }} 
-                />
-              </div>
-            ))}
+        {isClosed ? (
+          /* --- VISTA: PRE-VENTA CERRADA --- */
+          <div className="mt-[5px] animate-in">
+            <OrderForm 
+              isClosed={isClosed} 
+              preVenta={preVenta} 
+              formData={formData} 
+              setFormData={setFormData}
+              selectedCookie={selectedCookie}
+              isDetailModalOpen={isDetailModalOpen}
+              setIsDetailModalOpen={setIsDetailModalOpen}
+              packs={packs}
+              cookies={cookies}
+              successDeliveryType={successDeliveryType}
+            />
           </div>
-        </div>
-      </section>
+        ) : (
+          /* --- VISTA: PRE-VENTA ABIERTA --- */
+          <>
+            {/* --- SECCIÓN 1: PACKS ESPECIALES --- */}
+            {packs.filter(p => p.activo).length > 0 && (
+              <section className="mt-12 mb-10 animate-in">
+                <h2 className="text-2xl sm:text-3xl text-center text-flavis-gold mb-4 font-secondary font-bold tracking-tight uppercase px-6 text-balance">
+                  Packs Especiales
+                </h2>
+                <p className="text-[10px] text-center text-white/40 uppercase tracking-[0.3em] mb-12 font-bold">
+                  La combinación perfecta para compartir
+                </p>
+                <div className="flex overflow-x-auto lg:overflow-x-visible snap-x snap-mandatory gap-6 pb-10 scrollbar-hide px-8 lg:px-0 lg:justify-center py-10 -my-10">
+                  {packs.filter(p => p.activo).map(pack => (
+                    <div key={`p_${pack.id}`} className="w-[280px] sm:w-[300px] flex-shrink-0 snap-start transition-transform hover:scale-[1.02]">
+                      <CookieCard 
+                        cookie={pack} 
+                        isPack={true}
+                        quantity={cart[`p_${pack.id}`] || 0} 
+                        onUpdate={(delta) => updateQuantity(`p_${pack.id}`, delta)} 
+                        onOpenModal={(p) => { 
+                          setSelectedCookie(p); 
+                          setIsDetailModalOpen(true); 
+                        }} 
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
-      <OrderForm 
-        isClosed={isClosed} 
-        formData={formData} 
-        setFormData={setFormData} 
-        onFileUpload={handleFileUpload} 
-        onPhoneBlur={handlePhoneBlur} 
-        isExistingCustomer={isExistingCustomer} 
-        qrUrl={preVenta?.qrUrl}
-        previewUrl={previewUrl} 
-        onRemoveFile={handleRemoveFile} 
-        loading={loading} 
-        isSearching={isSearching}
-        preVenta={preVenta} 
-        cart={cart} 
-        cookies={cookies} 
-        total={total} 
-        handleOrder={handleOrder}
-        formErrors={formErrors} 
-        isShaking={isShaking}
-        selectedCookie={selectedCookie}
-        isDetailModalOpen={isDetailModalOpen}
-        setIsDetailModalOpen={setIsDetailModalOpen}
-        successOrder={showOrderSuccessModal} 
-        setSuccessOrder={setShowOrderSuccessModal} 
-        successName={customerNameForModal} 
-      />
-    </>
-  )}
-</main>
+            {/* --- SECCIÓN 2: INDIVIDUALES --- */}
+            {cookies.filter(c => c.activo).length > 0 && (
+              <section className={`${packs.filter(p => p.activo).length > 0 ? 'mt-20' : 'mt-12'} mb-20 animate-in`}>
+                <h2 className="text-xl sm:text-2xl text-center text-white/70 mb-8 font-secondary font-bold tracking-tight uppercase px-6">
+                  Elige tus favoritas
+                </h2>
 
+                <div className="relative">
+                  <div className="flex overflow-x-auto lg:overflow-x-visible snap-x snap-mandatory gap-6 pb-10 scrollbar-hide px-8 lg:px-0 lg:justify-center py-10 -my-10">
+                    {cookies.filter(c => c.activo).map(cookie => (
+                      <div key={`c_${cookie.id}`} className="w-[280px] sm:w-[300px] flex-shrink-0 snap-start transition-transform hover:scale-[1.02]">
+                        <CookieCard 
+                          cookie={cookie} 
+                          isPack={false}
+                          quantity={cart[`c_${cookie.id}`] || 0} 
+                          onUpdate={(delta) => updateQuantity(`c_${cookie.id}`, delta)} 
+                          onOpenModal={(c) => { 
+                            setSelectedCookie(c); 
+                            setIsDetailModalOpen(true); 
+                          }} 
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* --- FORMULARIO DE PEDIDO --- */}
+            <OrderForm 
+              isClosed={isClosed} 
+              formData={formData} 
+              setFormData={setFormData} 
+              onFileUpload={handleFileUpload} 
+              onPhoneBlur={handlePhoneBlur} 
+              isExistingCustomer={isExistingCustomer} 
+              qrUrl={preVenta?.qrUrl}
+              previewUrl={previewUrl} 
+              onRemoveFile={handleRemoveFile} 
+              loading={loading} 
+              isSearching={isSearching}
+              preVenta={preVenta} 
+              cart={cart} 
+              cookies={cookies} 
+              total={total} 
+              handleOrder={handleOrder}
+              formErrors={formErrors} 
+              isShaking={isShaking}
+              selectedCookie={selectedCookie}
+              isDetailModalOpen={isDetailModalOpen}
+              setIsDetailModalOpen={setIsDetailModalOpen}
+              successOrder={showOrderSuccessModal} 
+              setSuccessOrder={setShowOrderSuccessModal} 
+              successName={customerNameForModal} 
+              packs={packs}
+              successDeliveryType={successDeliveryType}
+            />
+          </>
+        )}
+      </main>
+
+      {/* --- MODAL DE ERROR --- */}
       {errorModal.show && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[400] flex items-center justify-center p-4">
           <div className="bg-white p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl border-t-8 border-red-500 animate-in">
             <h2 className="text-2xl font-main font-bold text-red-600 mb-2 italic tracking-tight">Aviso de Flavis</h2>
             <p className="font-secondary text-gray-700 leading-relaxed font-bold">{errorModal.message}</p>

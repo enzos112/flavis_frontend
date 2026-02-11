@@ -54,8 +54,16 @@ const PedidosModule = () => {
 
   const bakingSummary = activeOrders.reduce((acc, order) => {
     order.detalles.forEach(det => {
-      const name = det.cookie.nombre;
-      acc[name] = (acc[name] || 0) + det.cantidad;
+      if (det.esPack && det.pack && det.pack.galletas) {
+        // Si es pack, sumamos la cantidad a cada galleta que compone el pack
+        det.pack.galletas.forEach(g => {
+          acc[g.nombre] = (acc[g.nombre] || 0) + det.cantidad;
+        });
+      } else if (det.cookie) {
+        // Si es galleta individual, lógica original
+        const name = det.cookie.nombre;
+        acc[name] = (acc[name] || 0) + det.cantidad;
+      }
     });
     return acc;
   }, {});
@@ -68,7 +76,6 @@ const PedidosModule = () => {
       `${o.cliente?.nombre} ${o.cliente?.apellido}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       o.cliente?.celular.includes(searchTerm)
     );
-
 
   const sortedOrders = [...filteredOrdersList].sort((a, b) => {
     if (a.visto !== b.visto) {
@@ -108,6 +115,7 @@ const PedidosModule = () => {
   // --- EXPORTACIÓN A EXCEL ---
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
+    
     const sheet1 = workbook.addWorksheet('Resumen Hornado');
     sheet1.columns = [
       { header: 'Galleta', key: 'name', width: 30 },
@@ -121,18 +129,32 @@ const PedidosModule = () => {
     const sheet2 = workbook.addWorksheet('Lista de Pedidos');
     sheet2.columns = [
       { header: '#', key: 'id', width: 5 },
-      { header: 'Cliente', key: 'cliente', width: 30 },
+      { header: 'Cliente', key: 'cliente', width: 25 },
       { header: 'Celular', key: 'celular', width: 15 },
-      { header: 'Pedido', key: 'pedido', width: 50 },
-      { header: 'Total', key: 'total', width: 15 },
-      { header: 'Estado', key: 'estado', width: 15 }
+      { header: 'Modalidad', key: 'tipo', width: 15 }, 
+      { header: 'Dirección / Entrega', key: 'direccion', width: 45 }, 
+      { header: 'Pedido', key: 'pedido', width: 40 },
+      { header: 'Total', key: 'total', width: 12 },
+      { header: 'Estado', key: 'estado', width: 12 }
     ];
+
     orders.forEach((o, i) => {
+      const direccionCompleta = o.tipoEntrega === 'DELIVERY'
+        ? `${o.direccion?.distrito}: ${o.direccion?.detalle}${o.direccion?.referencia ? ` (Ref: ${o.direccion.referencia})` : ''}`
+        : 'Recojo en Local (Surco)';
+
+      const descripcionPedido = o.detalles.map(d => {
+        const nombre = d.esPack ? `📦 Pack: ${d.pack?.nombre}` : d.cookie?.nombre;
+        return `${d.cantidad}x ${nombre}`;
+      }).join(", ");
+
       sheet2.addRow({
         id: i + 1,
         cliente: `${o.cliente?.nombre} ${o.cliente?.apellido}`,
         celular: o.cliente?.celular,
-        pedido: o.detalles.map(d => `${d.cantidad}x ${d.cookie.nombre}`).join(", "),
+        tipo: o.tipoEntrega || 'RECOJO',
+        direccion: direccionCompleta,
+        pedido: descripcionPedido,
         total: `S/ ${o.montoTotal.toFixed(2)}`,
         estado: o.anulado ? 'ANULADO' : 'ACTIVO'
       });
@@ -161,56 +183,79 @@ const PedidosModule = () => {
     doc.text("2. Lista de Pedidos (Válidos)", 14, doc.lastAutoTable.finalY + 15);
     autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 20,
-      head: [['#', 'Cliente', 'Celular', 'Pedido', 'Total']],
-      body: activeOrders.map((o, i) => [
-        i + 1, 
-        `${o.cliente?.nombre} ${o.cliente?.apellido}`,
-        o.cliente?.celular,
-        o.detalles.map(d => `${d.cantidad}x ${d.cookie.nombre}`).join(", "),
-        `S/ ${o.montoTotal.toFixed(2)}`
-      ]),
-      headStyles: { fillColor: [50, 99, 113] }
+      head: [['#', 'Cliente', 'Celular', 'Modalidad', 'Entrega', 'Total']],
+      body: activeOrders.map((o, i) => {
+        const infoEntrega = o.tipoEntrega === 'DELIVERY'
+          ? `${o.direccion?.distrito}: ${o.direccion?.detalle}`
+          : 'Recojo en local';
+
+        return [
+          i + 1, 
+          `${o.cliente?.nombre} ${o.cliente?.apellido}`,
+          o.cliente?.celular,
+          o.tipoEntrega || 'RECOJO',
+          infoEntrega,
+          `S/ ${o.montoTotal.toFixed(2)}`
+        ];
+      }),
+      headStyles: { fillColor: [50, 99, 113] },
+      styles: { fontSize: 8 } 
     });
 
     doc.save(`Flavis_Reporte_${activePreVenta?.nombreCampania || 'Ventas'}.pdf`);
   };
 
+  // --- LÓGICA DE NOTIFICACIÓN WHATSAPPv---
   const handleNotify = async (order) => {
     const fecha = activePreVenta?.fechaEntrega 
       ? new Date(activePreVenta.fechaEntrega + "T00:00:00").toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: '2-digit' })
       : "Fecha por confirmar";
 
     const resumenGalletas = order.detalles
-      .map(d => `• ${d.cantidad}x ${d.cookie.nombre}`)
+      .map(d => {
+        const nombreItem = d.esPack ? `📦 Pack: ${d.pack?.nombre}` : d.cookie?.nombre;
+        return `• ${d.cantidad}x ${nombreItem}`;
+      })
       .join('%0A'); 
 
     const hug = "%F0%9F%AB%AC";
     const cookie = "%F0%9F%8D%AA";
     const location = "%F0%9F%93%8D";
-    const sparkles = "%E2%9C%A8";
+    const motorizado = "%F0%9F%9B%B5";
     const alert = "%F0%9F%9A%A8";
     const warning = "%E2%9A%A0%EF%B8%8F";
     const heart = "%F0%9F%AA%B5";
 
+    const esDelivery = order.tipoEntrega === 'DELIVERY';
+    
+    const infoLogistica = esDelivery 
+      ? `*Dirección de Envío:*%0A${motorizado} ${order.direccion?.distrito} - ${order.direccion?.detalle}%0A_Ref: ${order.direccion?.referencia || 'Sin referencia'}_%0A`
+      : `*Dirección de recojo:*%0A${location} Las gardenias 106, Surco (Ref. Parque Casuarinas)%0A`;
+
+    const instrucciones = esDelivery
+      ? `   1. Estar atento al celular en el rango de horario%0A` +
+        `   2. El repartidor te llamará al llegar a tu dirección%0A` +
+        `   3. Ten a la mano tu DNI para la entrega%0A%0A`
+      : `   1. Acercarse a recepción%0A` + 
+        `   2. Brindar el nombre que puso en el formulario%0A` +
+        `   3. Le entregarán su cajita%0A%0A`;
+
     const mensaje = `Hola *${order.cliente?.nombre}* ${hug}%0A` +
       `Te escribo confirmando tu orden de *Flavis Cookies of the Week* ${cookie}%0A%0A` +
       `*Resumen de tu orden:*%0A${resumenGalletas}%0A%0A` +
-      `*Dirección de recojo:*%0A${location} Las gardenias 106, Surco%0A` +
-      `Horario: ${activePreVenta?.horarioEntrega || '3pm - 6pm'}%0A` +
+      infoLogistica +
+      `Horario: 11:00 am - 1:00 pm%0A` + 
       `${fecha.charAt(0).toUpperCase() + fecha.slice(1)}%0A%0A` +
-      `*Al llegar (usted o su delivery) debe:*%0A%0A` +
-      `   1. Acercarse a recepción%0A` +
-      `   2. Brindar el nombre que puso en el formulario%0A` +
-      `   3. Le entregarán su cajita%0A%0A` +
+      `*${esDelivery ? 'Para recibir tu pedido' : 'Al llegar (usted o su delivery)'} debe:*%0A%0A` +
+      instrucciones +
       `${alert} *NO olvidar* 👇🏼%0A%0A` +
-      `${warning} Debe llegar dentro del horario%0A` +
-      `${warning} En caso de no poder recogerlo, se coordina para el día siguiente%0A` +
+      `${warning} Estar presente dentro del horario indicado%0A` +
+      `${warning} En caso de no poder recibirlo, se coordina el reenvío (costo adicional)%0A` +
       `${warning} Devoluciones con 48hr anticipación%0A` +
-      `${warning} Mantener la caja en horizontal%0A%0A` +
-      `Sin más, estoy feliz de hornearte tu postrecito de finde, no dudes en consultar si algo no quedó claro ${heart}`;
+      `${warning} Mantener la caja en horizontal ${heart}`;
 
     window.open(`https://api.whatsapp.com/send?phone=51${order.cliente?.celular}&text=${mensaje}`, '_blank');
-  };
+};
 
 
   if (loading) return <div className="p-20 text-center font-sans font-bold text-flavis-blue dark:text-flavis-gold animate-pulse">Cargando base de datos de Flavis...</div>;
@@ -291,15 +336,15 @@ const PedidosModule = () => {
 
       <div className="bg-white dark:bg-flavis-card-dark rounded-[2.5rem] shadow-xl overflow-hidden border border-flavis-blue/5 dark:border-white/5 transition-colors">
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[700px] md:min-w-full">
+          <table className="w-full text-left min-w-[900px] md:min-w-full">
             <thead>
               <tr className="text-[10px] uppercase font-black text-flavis-blue/30 dark:text-white/30 tracking-[0.2em] border-b border-flavis-blue/5 dark:border-white/5">
-                <th className="px-8 py-6 text-center">Listo</th>
-                <th className="px-8 py-6 text-center">Anular</th>
-                <th className="px-8 py-6">Cliente</th>
-                <th className="px-8 py-6">Pedido</th>
-                <th className="px-8 py-6 text-center">Pago</th>
-                <th className="px-8 py-6 text-right">Acciones</th>
+                <th className="px-6 py-6 text-center">Gestión</th> 
+                <th className="px-6 py-6">Cliente</th>
+                <th className="px-6 py-6">Entrega / Dirección</th>
+                <th className="px-6 py-6">Pedido</th>
+                <th className="px-6 py-6 text-center">Pago</th>
+                <th className="px-6 py-6 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-flavis-blue/5 dark:divide-white/5">
@@ -314,22 +359,31 @@ const PedidosModule = () => {
                     : 'hover:bg-[#f8f9f5]/50 dark:hover:bg-white/5'
                   }`}
                 >
-                  <td className="px-8 py-6 text-center">
-                    {activeTab === 'activos' ? (
-                      <input type="checkbox" className="w-5 h-5 accent-green-600 cursor-pointer transition-transform active:scale-90" checked={readyOrders.includes(order.id)} onChange={() => toggleReady(order.id)} />
-                    ) : (
-                      <span className="text-red-500 text-lg">⚠️</span>
-                    )}
+                  {/* --- COLUMNA GESTIÓN: Checkboxes horizontales --- */}
+                  <td className="px-6 py-6">
+                    <div className="flex items-center justify-center gap-6">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[7px] uppercase opacity-40 font-black mb-1">Listo</span>
+                        {activeTab === 'activos' ? (
+                          <input type="checkbox" className="w-5 h-5 accent-green-600 cursor-pointer transition-transform active:scale-90" checked={readyOrders.includes(order.id)} onChange={() => toggleReady(order.id)} />
+                        ) : (
+                          <span className="text-red-500 text-xs">⚠️</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[7px] uppercase opacity-40 font-black mb-1">Anular</span>
+                        <input 
+                          type="checkbox" 
+                          checked={order.anulado}
+                          onChange={() => setOrderToToggle(order)}
+                          className={`w-4 h-4 cursor-pointer accent-red-600 transition-all ${order.anulado ? 'opacity-100' : 'opacity-20 hover:opacity-100 dark:opacity-40'}`}
+                        />
+                      </div>
+                    </div>
                   </td>
-                  <td className="px-8 py-6 text-center">
-                    <input 
-                      type="checkbox" 
-                      checked={order.anulado}
-                      onChange={() => setOrderToToggle(order)}
-                      className={`w-5 h-5 cursor-pointer accent-red-600 transition-all ${order.anulado ? 'opacity-100' : 'opacity-20 hover:opacity-100 dark:opacity-40'}`}
-                    />
-                  </td>
-                  <td className="px-8 py-6">
+
+                  {/* --- COLUMNA CLIENTE --- */}
+                  <td className="px-6 py-6">
                     <div>
                       <p className={`font-bold text-sm ${readyOrders.includes(order.id) || order.anulado ? 'line-through opacity-50' : 'text-flavis-blue dark:text-white'}`}>
                         {order.cliente?.nombre} {order.cliente?.apellido}
@@ -337,34 +391,71 @@ const PedidosModule = () => {
                       <p className="text-[10px] font-bold text-flavis-blue/40 dark:text-white/30 tracking-tighter font-sans">{order.cliente?.celular}</p>
                     </div>
                   </td>
-                  <td className="px-8 py-6">
+
+                  {/* --- COLUMNA ENTREGA: Dirección Detallada --- */}
+                  <td className="px-6 py-6">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{order.tipoEntrega === 'DELIVERY' ? '🛵' : '🏠'}</span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${order.tipoEntrega === 'DELIVERY' ? 'text-blue-500' : 'text-flavis-gold'}`}>
+                          {order.tipoEntrega || 'RECOJO'}
+                        </span>
+                      </div>
+                      {order.tipoEntrega === 'DELIVERY' ? (
+                        <div className="leading-tight">
+                          <p className="text-[11px] font-bold text-flavis-blue/90 dark:text-white/90">
+                            {order.direccion?.distrito}
+                          </p>
+                          <p className="text-[10px] text-flavis-blue/70 dark:text-white/60 italic max-w-[200px]">
+                            {order.direccion?.detalle}
+                          </p>
+                          {order.direccion?.referencia && (
+                            <p className="text-[9px] text-flavis-blue/40 dark:text-white/30 mt-0.5">
+                              Ref: {order.direccion.referencia}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] font-bold text-flavis-gold/80 italic">Recojo en Surco (Gardenias)</p>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* --- COLUMNA PEDIDO --- */}
+                  <td className="px-6 py-6">
                     <div className="space-y-1">
-                      {order.detalles.slice(0, 2).map((det, idx) => (
-                        <p key={idx} className={`text-[11px] font-bold ${order.anulado ? 'text-red-300 dark:text-red-900/40' : 'text-flavis-blue/70 dark:text-white/60'}`}>
-                          <span className={`${order.anulado ? 'text-red-400 dark:text-red-900/60' : 'text-flavis-gold'} font-black mr-1 font-sans`}>{det.cantidad}x</span> {det.cookie.nombre}
-                        </p>
-                      ))}
+                      {order.detalles.slice(0, 2).map((det, idx) => {
+                        const nombreProducto = det.esPack ? `📦 ${det.pack?.nombre}` : det.cookie?.nombre;
+                        return (
+                          <p key={idx} className={`text-[11px] font-bold ${order.anulado ? 'text-red-300' : 'text-flavis-blue/70 dark:text-white/60'}`}>
+                            <span className={`${order.anulado ? 'text-red-400' : 'text-flavis-gold'} font-black mr-1`}>{det.cantidad}x</span> {nombreProducto}
+                          </p>
+                        );
+                      })}
                       {order.detalles.length > 2 && (
-                        <button onClick={() => setViewingOrder(order)} className={`text-[9px] font-black uppercase tracking-tighter hover:underline block mt-1 ${order.anulado ? 'text-red-400' : 'text-flavis-gold'}`}>
-                          + {order.detalles.length - 2} sabores más...
+                        <button onClick={() => setViewingOrder(order)} className="text-[9px] font-black uppercase text-flavis-gold hover:underline mt-1">
+                          + {order.detalles.length - 2} ítems más...
                         </button>
                       )}
                     </div>
                   </td>
-                  <td className="px-8 py-6 text-center">
+
+                  {/* --- COLUMNA PAGO --- */}
+                  <td className="px-6 py-6 text-center">
                     <span className={`${order.anulado ? 'bg-red-100 text-red-500 dark:bg-red-900/20 dark:text-red-400' : 'bg-flavis-gold/10 dark:bg-flavis-gold/5 text-flavis-gold'} px-4 py-1.5 rounded-full font-black text-xs transition-colors font-sans`}>
                       S/ {order.montoTotal.toFixed(2)}
                     </span>
                   </td>
-                  <td className="px-8 py-6">
+
+                  {/* --- COLUMNA ACCIONES --- */}
+                  <td className="px-6 py-6">
                     <div className="flex items-center justify-end gap-2">
-                      {/* BOTÓN MARCAR COMO VISTO */}
                       {!order.visto && !order.anulado && (
                         <button 
                           onClick={() => handleMarcarVisto(order.id)}
                           className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest hover:bg-green-600 transition-all shadow-md animate-pulse"
                         >
-                          Marcar visto
+                          Visto
                         </button>
                       )}
 
@@ -375,14 +466,13 @@ const PedidosModule = () => {
                       {readyOrders.includes(order.id) && !order.anulado && (
                         <button 
                           onClick={() => handleNotify(order)} 
-                          className="bg-flavis-gold text-flavis-blue dark:bg-flavis-gold dark:text-flavis-dark h-8 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md flex items-center gap-1 animate-in"
+                          className="bg-flavis-gold text-flavis-blue dark:bg-flavis-gold dark:text-flavis-dark h-8 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md"
                         >
-                          <span>Notificar</span>
-                          <span className="text-[12px]">🔔</span>
+                          🔔
                         </button>
                       )}
 
-                      <button onClick={() => setSelectedVoucher(order.comprobanteUrl)} className={`bg-flavis-blue dark:bg-white/10 text-white dark:text-white/80 h-8 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-sm flex items-center justify-center ${order.anulado ? 'opacity-50' : ''}`}>Voucher</button>
+                      <button onClick={() => setSelectedVoucher(order.comprobanteUrl)} className={`bg-flavis-blue dark:bg-white/10 text-white dark:text-white/80 h-8 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-sm ${order.anulado ? 'opacity-50' : ''}`}>Voucher</button>
                     </div>
                   </td>
                 </tr>
@@ -431,12 +521,15 @@ const PedidosModule = () => {
             <h3 className="text-2xl font-main font-bold text-flavis-blue dark:text-white italic mb-2 tracking-tighter">Detalle del Pedido</h3>
             <p className="text-[10px] uppercase font-black text-flavis-blue/40 dark:text-white/30 tracking-widest mb-6 border-b border-flavis-blue/5 dark:border-white/5 pb-4">Cliente: {viewingOrder.cliente?.nombre} {viewingOrder.cliente?.apellido}</p>
             <div className="space-y-4 mb-8">
-              {viewingOrder.detalles.map((det, idx) => (
-                <div key={idx} className="flex justify-between items-center bg-white/50 dark:bg-white/5 p-3 rounded-2xl border border-flavis-blue/5 dark:border-white/5 transition-colors">
-                  <span className="text-sm font-bold text-flavis-blue dark:text-white/90">{det.cookie.nombre}</span>
-                  <span className="bg-flavis-gold text-white dark:text-flavis-dark px-3 py-1 rounded-full font-black text-xs font-sans">x{det.cantidad}</span>
-                </div>
-              ))}
+              {viewingOrder.detalles.map((det, idx) => {
+                const nombreItem = det.esPack ? `📦 Pack: ${det.pack?.nombre}` : det.cookie?.nombre;
+                return (
+                  <div key={idx} className="flex justify-between items-center bg-white/50 dark:bg-white/5 p-3 rounded-2xl border border-flavis-blue/5">
+                    <span className="text-sm font-bold text-flavis-blue dark:text-white/90">{nombreItem}</span>
+                    <span className="bg-flavis-gold text-white px-3 py-1 rounded-full font-black text-xs">x{det.cantidad}</span>
+                  </div>
+                );
+              })}
             </div>
             <button onClick={() => setViewingOrder(null)} className="w-full bg-flavis-blue dark:bg-flavis-gold text-white dark:text-flavis-dark py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all">Cerrar Detalle</button>
           </div>

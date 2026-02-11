@@ -50,9 +50,13 @@ const DashboardModule = ({ isDarkMode }) => {
       return o.preVenta?.id?.toString() === selectedPV.toString();
     });
 
-  const totalIngresos = filteredOrders.reduce((acc, curr) => acc + (curr.montoTotal || 0), 0);
+  // --- LÓGICA DE CÁLCULOS FILTRADOS (FASE 1) ---
+  const totalRecaudado = filteredOrders.reduce((acc, curr) => acc + (curr.montoTotal || 0), 0);
+  const totalEnvios = filteredOrders.reduce((acc, curr) => acc + (curr.costoEnvio || 0), 0);
+  const totalVentaGalletas = totalRecaudado - totalEnvios;
+  
   const totalOrdenes = filteredOrders.length;
-  const ticketPromedio = totalOrdenes > 0 ? totalIngresos / totalOrdenes : 0;
+  const ticketPromedio = totalOrdenes > 0 ? totalVentaGalletas / totalOrdenes : 0;
 
   // --- PROCESAMIENTO DE TIEMPO PARA EL GRÁFICO ---
   const salesTimeline = filteredOrders.reduce((acc, o) => {
@@ -126,8 +130,14 @@ const DashboardModule = ({ isDarkMode }) => {
   const cookieStats = filteredOrders.reduce((acc, o) => {
     if (o.detalles) {
       o.detalles.forEach(d => {
-        const nombre = d.cookie?.nombre || "Desconocida";
-        acc[nombre] = (acc[nombre] || 0) + d.cantidad;
+        if (d.esPack && d.pack && d.pack.galletas) {
+          d.pack.galletas.forEach(g => {
+            acc[g.nombre] = (acc[g.nombre] || 0) + d.cantidad;
+          });
+        } else if (d.cookie) {
+          const nombre = d.cookie.nombre;
+          acc[nombre] = (acc[nombre] || 0) + d.cantidad;
+        }
       });
     }
     return acc;
@@ -136,7 +146,7 @@ const DashboardModule = ({ isDarkMode }) => {
   const topCookie = Object.entries(cookieStats).sort((a, b) => b[1] - a[1])[0] || ["---", 0];
   const pieData = Object.entries(cookieStats).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 
-  // --- EXPORTACIÓN A EXCEL CON REGLA DE PRIVACIDAD (ANÓNIMOS) ---
+  // --- EXPORTACIÓN A EXCEL CON REGLA DE PRIVACIDAD ---
   const exportGlobalExcel = async () => {
     const workbook = new ExcelJS.Workbook();  
     const isAll = selectedPV === 'all';
@@ -157,21 +167,20 @@ const DashboardModule = ({ isDarkMode }) => {
       sheet.addRow({
         campania: o.preVenta?.nombreCampania || 'N/A',
         fecha: new Date(o.fechaCreacion).toLocaleDateString(),
-        // REGLA DE PRIVACIDAD: Si el cliente NO guardó datos, se oculta
         cliente: o.cliente?.guardarDatos ? `${o.cliente.nombre} ${o.cliente.apellido}` : 'ANÓNIMO',
         celular: o.cliente?.guardarDatos ? o.cliente.celular : 'OCULTO',
-        pedido: o.detalles?.map(d => `${d.cantidad}x ${d.cookie?.nombre}`).join(", "),
+        pedido: o.detalles?.map(d => {
+          const name = d.esPack ? `📦 Pack: ${d.pack?.nombre}` : d.cookie?.nombre;
+          return `${d.cantidad}x ${name}`;
+        }).join(", "),
         monto: o.montoTotal.toFixed(2)
       });
     });
 
-    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF326371' } };
-
     sheet.addRow({});
     const totalRow = sheet.addRow({ 
-      pedido: 'RESUMEN TOTAL DE INGRESOS:', 
-      monto: totalIngresos.toFixed(2) 
+      pedido: 'RESUMEN TOTAL DE INGRESOS (Caja):', 
+      monto: totalRecaudado.toFixed(2) 
     });
     totalRow.font = { bold: true };
 
@@ -195,9 +204,10 @@ const DashboardModule = ({ isDarkMode }) => {
       // REPORTE ESPECÍFICO: Solo la campaña seleccionada
       const pvActual = allPreventas.find(pv => pv.id.toString() === selectedPV.toString());
       mensaje = `${emojiChart} *REPORTE DE CAMPAÑA: ${pvActual?.nombreCampania}*%0A%0A` +
-        `*Ventas:* S/ ${totalIngresos.toFixed(2)}%0A` +
-        `*N° de Pedidos:* ${totalOrdenes}%0A%0A` +
-        `_Datos actualizados._`;
+              `*Ventas Totales:* S/ ${totalRecaudado.toFixed(2)}%0A` +
+              `*Neto Galletas:* S/ ${totalVentaGalletas.toFixed(2)}%0A` +
+              `*Caja Delivery:* S/ ${totalEnvios.toFixed(2)}%0A` +
+              `*N° de Pedidos:* ${totalOrdenes}%0A%0A`;
     }
     window.open(`https://api.whatsapp.com/send?text=${mensaje}`, '_blank');
   };
@@ -241,8 +251,9 @@ const DashboardModule = ({ isDarkMode }) => {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-        <MetricCard title="Ventas Totales" value={`S/ ${totalIngresos.toFixed(2)}`} color="text-flavis-gold" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-10">        
+        <MetricCard title="Neto Galletas" value={`S/ ${totalVentaGalletas.toFixed(2)}`} color="text-flavis-gold" />
+        <MetricCard title="Caja Delivery" value={`S/ ${totalEnvios.toFixed(2)}`} color="text-flavis-blue dark:text-white/90" />
         <MetricCard title="Órdenes" value={totalOrdenes.toString().padStart(2, '0')} color="text-flavis-blue dark:text-white/90" />
         <MetricCard title="Ticket Promedio" value={`S/ ${ticketPromedio.toFixed(2)}`} color="text-flavis-blue dark:text-white/90" />
         <MetricCard title="Galleta Estrella" value={topCookie[0]} color="text-flavis-blue dark:text-flavis-gold" isMainFont />
