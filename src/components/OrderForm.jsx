@@ -253,18 +253,17 @@ const CLOSED_MESSAGE = (
 const OrderForm = ({ 
   formData, setFormData, onFileUpload, onPhoneBlur, isExistingCustomer, 
   qrUrl, previewUrl, onRemoveFile, loading, isSearching, preVenta, 
-  cart, total, cookies, packs, handleOrder, formErrors, isShaking, 
+  cart, total, cookies, packs, handleOrder, formErrors, 
+  isShaking, setIsShaking,
   successOrder, setSuccessOrder, successName, successDeliveryType,
-  selectedCookie, setSelectedCookie, isDetailModalOpen, setIsDetailModalOpen,
-  isClosed 
-  
+  selectedCookie, setSelectedCookie, setFormErrors, isDetailModalOpen, setIsDetailModalOpen,
+  isClosed, setShowWarningModal, showWarningModal
 }) => {
   // --- 1. ESTADOS LOCALES (Solo lo que no pertenece a App.jsx) ---
   const [copiedId, setCopiedId] = useState(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showClosedModal, setShowClosedModal] = useState(false);
   const [showWholesaleModal, setShowWholesaleModal] = useState(false);
-  const [showWarningModal, setShowWarningModal] = useState(false);
   const [direccionesGuardadas, setDireccionesGuardadas] = useState([]);
   const [mostrarNuevaDireccion, setMostrarNuevaDireccion] = useState(true);
   
@@ -336,49 +335,52 @@ const OrderForm = ({
   };
 
   const validateAndOrder = () => {
-    const errors = { ...formErrors };
-    if (!formData.nombres?.trim()) errors.nombres = true;
-    if (!formData.apellidos?.trim()) errors.apellidos = true;
-    if (!formData.celular || formData.celular.length < 9) errors.celular = true;
-    if (!formData.comprobanteUrl) errors.comprobanteUrl = true;
-    if (!formData.aceptoCondiciones) errors.aceptoCondiciones = true;
+  const errors = {}; 
+  
+  if (!formData.nombres?.trim()) errors.nombres = true;
+  if (!formData.apellidos?.trim()) errors.apellidos = true;
+  if (!formData.celular || formData.celular.length < 9) errors.celular = true;
+  if (!formData.comprobanteUrl) errors.comprobanteUrl = true;
+  if (!formData.aceptoCondiciones) errors.aceptoCondiciones = true;
 
-    if (formData.tipoEntrega === 'DELIVERY') {
-      const distritoValido = distritosLima.includes(formData.direccion.distrito);
-      if (!formData.direccion.distrito || !distritoValido || !formData.direccion.detalle) {
-        errors.direccion = true;
-      }
+  if (formData.tipoEntrega === 'DELIVERY') {
+    const distritoValido = distritosLima.includes(formData.direccion.distrito);
+    if (!formData.direccion.distrito || !distritoValido || !formData.direccion.detalle?.trim()) {
+      errors.direccion = true; 
     }
-    
-    const totalQuantity = Object.values(cart).reduce((a, b) => a + b, 0);
-    if (totalQuantity === 0) errors.total = true;
+  }
+  
+  const totalQuantity = Object.values(cart).reduce((a, b) => a + b, 0);
+  if (totalQuantity === 0) errors.total = true;
 
-    if (Object.keys(errors).filter(k => errors[k]).length > 0) {
-      setShowWarningModal(true); 
-      return;
+  setFormErrors(errors); 
+
+  if (Object.keys(errors).length > 0) {
+    if (setIsShaking) { 
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 500);
     }
+    setShowWarningModal(true); 
+    return;
+  }
 
-    if (totalQuantity > 20) {
-      setShowWholesaleModal(true);
-      return;
-    }
+  if (totalQuantity > 20) {
+    setShowWholesaleModal(true);
+    return;
+  }
 
-    // Persistencia opcional de dirección
-    if (formData.guardarDatos && formData.tipoEntrega === 'DELIVERY') {
-      const existe = direccionesGuardadas.some(d => d.detalle === formData.direccion.detalle);
-      if (!existe) {
-        const nuevas = [...direccionesGuardadas, formData.direccion];
-        localStorage.setItem(`direcciones_${formData.celular}`, JSON.stringify(nuevas));
-      }
-    }
+  // El bloque de direcciones queda comentado para que no rompa nada
+  /* if (formData.guardarDatos && formData.tipoEntrega === 'DELIVERY') {
+    // Implementación futura
+  }
+  */
 
-    // Enviamos a App.jsx
-    handleOrder({
-      tipoEntrega: formData.tipoEntrega,
-      costoEnvio: formData.tipoEntrega === 'DELIVERY' ? 15.0 : 0.0,
-      direccion: formData.tipoEntrega === 'DELIVERY' ? formData.direccion : null
-    });
-  };
+  handleOrder({
+    tipoEntrega: formData.tipoEntrega,
+    costoEnvio: formData.tipoEntrega === 'DELIVERY' ? 15.0 : 0.0,
+    direccion: formData.tipoEntrega === 'DELIVERY' ? formData.direccion : null
+  });
+};
 
   const handleCheckboxClick = () => {
     if (!formData.aceptoCondiciones) {
@@ -604,9 +606,11 @@ const OrderForm = ({
                           </ul>
                         </div>
                       )}
+                      {formErrors.direccion && !formData.direccion.distrito && (
+                        <p className="text-red-400 text-[10px] mt-2 ml-2 font-bold uppercase italic animate-pulse">Debes seleccionar un distrito</p>
+                      )}
                     </div>
 
-                    {/* Resto de campos de dirección usando formData.direccion */}
                     <div className="grid grid-cols-1 gap-4 font-secondary">
                       <div>
                         <label className="block text-white mb-2 text-sm font-bold tracking-tight">Dirección Exacta *</label>
@@ -618,6 +622,9 @@ const OrderForm = ({
                           value={formData.direccion.detalle}
                           onChange={(e) => setFormData({ ...formData, direccion: { ...formData.direccion, detalle: e.target.value } })}
                         />
+                        {formErrors.direccion && !formData.direccion.detalle && (
+                          <p className="text-red-400 text-[10px] mt-2 ml-2 font-bold uppercase italic animate-pulse">La dirección es obligatoria</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-white mb-2 text-sm font-bold tracking-tight">Referencia</label>

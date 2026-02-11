@@ -46,6 +46,8 @@ function App() {
   const [errorModal, setErrorModal] = useState({ show: false, message: '' });
   const [customerNameForModal, setCustomerNameForModal] = useState(''); 
   const isClosed = !preVenta || preVenta.activo === false || preVenta.isClosed === true; 
+  const [showWarningModal, setShowWarningModal] = useState(false); 
+  const [showWholesaleModal, setShowWholesaleModal] = useState(false);
 
   useEffect(() => {
     const VERSION = "2.5"; 
@@ -299,8 +301,13 @@ function App() {
   if (!aceptoCondiciones) errors.aceptoCondiciones = true;
   if (total === 0) errors.total = true;
 
+  if (tipoEntrega === 'DELIVERY') {
+    if (!direccion?.distrito) errors.direccion = true;
+    if (!direccion?.detalle?.trim()) errors.direccion = true;
+  }
+
   if (Object.keys(errors).length > 0) {
-    setFormErrors(errors);
+    setFormErrors(errors); 
     setIsShaking(true);
     setTimeout(() => setIsShaking(false), 500);
     return;
@@ -358,6 +365,7 @@ function App() {
     setCart({});
     setPreviewUrl(null);
     setFormData(initialState); 
+    setFormErrors({}); 
 
   } catch (err) {
     console.error("Error en API:", err);
@@ -440,6 +448,14 @@ function App() {
               packs={packs}
               cookies={cookies}
               successDeliveryType={successDeliveryType}
+              formErrors={formErrors}
+              setFormErrors={setFormErrors}
+              showWarningModal={showWarningModal}
+              setShowWarningModal={setShowWarningModal}
+              isShaking={isShaking}
+              setIsShaking={setIsShaking}
+              successOrder={showOrderSuccessModal}
+              setSuccessOrder={setShowOrderSuccessModal}
             />
           </div>
         ) : (
@@ -520,7 +536,9 @@ function App() {
               total={total} 
               handleOrder={handleOrder}
               formErrors={formErrors} 
+              setFormErrors={setFormErrors}
               isShaking={isShaking}
+              setIsShaking={setIsShaking}
               selectedCookie={selectedCookie}
               isDetailModalOpen={isDetailModalOpen}
               setIsDetailModalOpen={setIsDetailModalOpen}
@@ -529,6 +547,8 @@ function App() {
               successName={customerNameForModal} 
               packs={packs}
               successDeliveryType={successDeliveryType}
+              showWarningModal={showWarningModal}
+              setShowWarningModal={setShowWarningModal}
             />
           </>
         )}
