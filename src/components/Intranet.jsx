@@ -6,6 +6,7 @@ import PreVentaModule from './admin/PreVentaModule';
 import ClientesModule from './admin/ClientesModule';
 import DashboardModule from './admin/DashboardModule';
 import HistorialModule from './admin/HistorialModule'; 
+import EgresosModule from './admin/EgresosModule';
 
 const Intranet = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -33,12 +34,13 @@ const Intranet = ({ onLogout }) => {
       case 'preventa': return <PreVentaModule />;
       case 'clientes': return <ClientesModule />;
       case 'historial': return <HistorialModule />;
+      case 'egresos': return <EgresosModule />;
       default: return <DashboardModule isDarkMode={darkMode} />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-transparent text-flavis-blue dark:text-white/90 flex transition-colors duration-300">
+    <div className="min-h-screen bg-[#fcfbf8] dark:bg-transparent text-flavis-blue dark:text-white/90 flex transition-colors duration-300">
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 

@@ -72,9 +72,8 @@ function App() {
     Promise.all([
       api.get('/preventas/activa').catch(() => null),
       api.get('/cookies/activas').catch(() => []),
-      api.get('/packs').catch(() => []) // NUEVO: Carga de packs
+      api.get('/packs').catch(() => [])
     ]).then(([pvRes, cookiesRes, packsRes]) => {
-      // --- Procesar Pre-Venta (Mismo bloque) ---
       if (pvRes?.data) {
         const pv = pvRes.data;
         if (pv.activo === false || pv.activo === 0) {
@@ -284,7 +283,7 @@ function App() {
   const { celular, nombres, apellidos, comprobanteUrl, aceptoCondiciones, guardarDatos } = formData;
   const { tipoEntrega, costoEnvio, direccion } = logisticaData;
 
-  const cookiesFromPacks = packs.reduce((acc, p) => acc + ((cart[`p_${p.id}`] || 0) * 4), 0);
+  const cookiesFromPacks = packs.reduce((acc, p) => acc + ((cart[`p_${p.id}`] || 0) * (p.galletas?.length || 0)), 0);
   const cookiesIndividual = cookies.reduce((acc, c) => acc + (cart[`c_${c.id}`] || 0), 0);
   const totalCookiesOrdered = cookiesIndividual + cookiesFromPacks;
 
@@ -463,43 +462,80 @@ function App() {
           <>
             {/* --- SECCIÓN 1: PACKS ESPECIALES --- */}
             {packs.filter(p => p.activo).length > 0 && (
-              <section className="mt-12 mb-10 animate-in">
-                <h2 className="text-2xl sm:text-3xl text-center text-flavis-gold mb-4 font-secondary font-bold tracking-tight uppercase px-6 text-balance">
+              <section className="mt-12 mb-8 animate-in relative">
+                <h2 className="text-2xl sm:text-3xl text-center text-flavis-gold mb-4 font-secondary font-bold tracking-tight uppercase px-6">
                   Packs Especiales
                 </h2>
-                <p className="text-[10px] text-center text-white/40 uppercase tracking-[0.3em] mb-12 font-bold">
+                <p className="text-[10px] text-center text-white/40 uppercase tracking-[0.3em] mb-8 font-bold">
                   La combinación perfecta para compartir
                 </p>
-                <div className="flex overflow-x-auto lg:overflow-x-visible snap-x snap-mandatory gap-6 pb-10 scrollbar-hide px-8 lg:px-0 lg:justify-center py-10 -my-10">
-                  {packs.filter(p => p.activo).map(pack => (
-                    <div key={`p_${pack.id}`} className="w-[280px] sm:w-[300px] flex-shrink-0 snap-start transition-transform hover:scale-[1.02]">
-                      <CookieCard 
-                        cookie={pack} 
-                        isPack={true}
-                        quantity={cart[`p_${pack.id}`] || 0} 
-                        onUpdate={(delta) => updateQuantity(`p_${pack.id}`, delta)} 
-                        onOpenModal={(p) => { 
-                          setSelectedCookie(p); 
-                          setIsDetailModalOpen(true); 
-                        }} 
-                      />
+
+                <div className="relative group max-w-full">
+                  {/* Degradados Responsivos */}
+                  <div className="absolute left-0 top-0 bottom-0 w-3 sm:w-8 lg:w-12 bg-gradient-to-r from-[#326371] to-transparent z-20 pointer-events-none"></div>
+                  <div className="absolute right-0 top-0 bottom-0 w-5 sm:w-16 lg:w-20 bg-gradient-to-l from-[#326371] to-transparent z-20 pointer-events-none"></div>
+
+                  {/* INDICADOR SOBRIO Y VISIBLE (Flecha con fondo oscuro y blur) */}
+                  {packs.filter(p => p.activo).length > 1 && (
+                    <div className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-30 animate-pulse-horizontal opacity-90 pointer-events-none bg-[#1e3b44]/60 backdrop-blur-sm p-2 sm:p-3 rounded-full shadow-lg">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-flavis-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                      </svg>
                     </div>
-                  ))}
+                  )}
+
+                  {/* CARRUSEL: Lógica matemática para centrar o alinear a la izquierda */}
+                  <div className={`flex overflow-x-auto snap-x snap-mandatory gap-6 pb-10 scrollbar-hide px-6 sm:px-12 ${packs.filter(p => p.activo).length <= 4 ? 'lg:justify-center' : 'lg:px-20 lg:justify-start'}`}>
+                    {packs.filter(p => p.activo).map(pack => (
+                      <div 
+                        key={`p_${pack.id}`} 
+                        className="w-[82vw] xs:w-[300px] sm:w-[320px] flex-shrink-0 snap-start transition-transform duration-500 py-2"
+                      >
+                        <CookieCard 
+                          cookie={pack} 
+                          isPack={true}
+                          quantity={cart[`p_${pack.id}`] || 0} 
+                          onUpdate={(delta) => updateQuantity(`p_${pack.id}`, delta)} 
+                          onOpenModal={(p) => { 
+                            setSelectedCookie(p); 
+                            setIsDetailModalOpen(true); 
+                          }} 
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </section>
             )}
 
             {/* --- SECCIÓN 2: INDIVIDUALES --- */}
             {cookies.filter(c => c.activo).length > 0 && (
-              <section className={`${packs.filter(p => p.activo).length > 0 ? 'mt-20' : 'mt-12'} mb-20 animate-in`}>
+              <section className={`${packs.filter(p => p.activo).length > 0 ? 'mt-8' : 'mt-12'} mb-16 animate-in relative`}>
                 <h2 className="text-xl sm:text-2xl text-center text-white/70 mb-8 font-secondary font-bold tracking-tight uppercase px-6">
                   Elige tus favoritas
                 </h2>
 
-                <div className="relative">
-                  <div className="flex overflow-x-auto lg:overflow-x-visible snap-x snap-mandatory gap-6 pb-10 scrollbar-hide px-8 lg:px-0 lg:justify-center py-10 -my-10">
+                <div className="relative group max-w-full">
+                  {/* Degradados Responsivos */}
+                  <div className="absolute left-0 top-0 bottom-0 w-3 sm:w-8 lg:w-12 bg-gradient-to-r from-[#326371] to-transparent z-20 pointer-events-none"></div>
+                  <div className="absolute right-0 top-0 bottom-0 w-5 sm:w-16 lg:w-20 bg-gradient-to-l from-[#326371] to-transparent z-20 pointer-events-none"></div>
+
+                  {/* INDICADOR SOBRIO Y VISIBLE */}
+                  {cookies.filter(c => c.activo).length > 1 && (
+                    <div className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-30 animate-pulse-horizontal opacity-90 pointer-events-none bg-[#1e3b44]/60 backdrop-blur-sm p-2 sm:p-3 rounded-full shadow-lg">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-flavis-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  )}
+
+                  {/* CARRUSEL: Lógica matemática para centrar o alinear a la izquierda */}
+                  <div className={`flex overflow-x-auto snap-x snap-mandatory gap-6 pb-10 scrollbar-hide px-6 sm:px-12 ${cookies.filter(c => c.activo).length <= 4 ? 'lg:justify-center' : 'lg:px-20 lg:justify-start'}`}>
                     {cookies.filter(c => c.activo).map(cookie => (
-                      <div key={`c_${cookie.id}`} className="w-[280px] sm:w-[300px] flex-shrink-0 snap-start transition-transform hover:scale-[1.02]">
+                      <div 
+                        key={`c_${cookie.id}`} 
+                        className="w-[82vw] xs:w-[300px] sm:w-[320px] flex-shrink-0 snap-start transition-transform duration-500 py-2"
+                      >
                         <CookieCard 
                           cookie={cookie} 
                           isPack={false}
