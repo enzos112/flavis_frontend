@@ -100,10 +100,8 @@ const CookiesModule = () => {
     setNewPack(prev => {
       const currentIds = [...prev.galletasIds];
       if (delta === 1) {
-        // Añadir una instancia del ID
         currentIds.push(cookieId);
       } else {
-        // Quitar solo una instancia del ID
         const index = currentIds.indexOf(cookieId);
         if (index > -1) {
           currentIds.splice(index, 1);
@@ -122,8 +120,9 @@ const CookiesModule = () => {
     e.preventDefault();
     
     const currentForm = activeTab === 'individuales' ? newCookie : newPack;
-    const precio = parseFloat(currentForm.precio);
-    const costo = parseFloat(currentForm.costoProduccion);
+
+    const precio = parseFloat(currentForm.precio) || 0;
+    const costo = parseFloat(currentForm.costoProduccion) || 0; 
 
     if (costo >= precio) {
       setAlertModal({ 
@@ -145,7 +144,6 @@ const CookiesModule = () => {
           await api.post('/cookies', cookieData);
         }
       } else {
-        // CAMBIO: Validación dinámica. Ahora permite cualquier cantidad mayor a 0.
         if (newPack.galletasIds.length === 0) {
           setAlertModal({ show: true, title: "Pack Incompleto", message: "Debes seleccionar al menos una galleta para crear el pack." });
           setLoading(false);
@@ -325,7 +323,7 @@ const CookiesModule = () => {
               </div>
             </div>
 
-            {/* SECCIÓN 2: LÓGICA DE SELECCIÓN (ACTUALIZADA) */}
+            {/* SECCIÓN 2: LÓGICA DE SELECCIÓN */}
             {activeTab === 'packs' && (
               <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
                 <div className="md:col-span-7 bg-flavis-blue/5 dark:bg-flavis-dark p-6 rounded-[2.5rem] border border-flavis-blue/5 dark:border-white/5">
@@ -376,7 +374,6 @@ const CookiesModule = () => {
                 <div className="md:col-span-5 bg-flavis-gold/5 rounded-[2.5rem] p-6 border border-flavis-gold/20 self-stretch flex flex-col min-h-[300px]">
                   <p className="text-[10px] font-black uppercase text-flavis-gold mb-6 tracking-widest text-center">Contenido del Pack</p>
                   <div className="space-y-3 flex-1 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
-                    {/* Agrupamos visualmente los IDs únicos para mostrar "Sabor x Cantidad" */}
                     {[...new Set(newPack.galletasIds)].map(id => {
                       const g = cookies.find(c => c.id === id);
                       const qty = getCountForFlavor(id);
