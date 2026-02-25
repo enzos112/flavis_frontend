@@ -30,13 +30,16 @@ const Login = ({ onLogin, onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#eef1e6] flex items-center justify-center p-4 font-secondary">
+
+    <main className="min-h-screen bg-[#eef1e6] flex items-center justify-center p-4 font-secondary">
       <div className="bg-white p-12 rounded-[3rem] max-w-md w-full shadow-xl border border-[#326371]/5">
         <div className="text-center mb-10">
           <h2 className="text-4xl font-main font-bold text-flavis-blue italic tracking-tighter">Panel Administrativo</h2>
-          <p className="text-[10px] uppercase tracking-[0.3em] opacity-50 mt-2 font-bold text-flavis-blue">Acceso para Administradores</p>
-        </div>
-        
+            <p className="text-[10px] uppercase tracking-[0.3em] text-flavis-blue/80 mt-2 font-bold text-center">
+              Acceso para administradores
+            </p>        
+          </div>
+  
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             {/* ETIQUETA CORREGIDA */}
@@ -74,12 +77,16 @@ const Login = ({ onLogin, onBack }) => {
             {isSubmitting ? 'Verificando...' : 'Iniciar Sesión'}
           </button>
           
-          <button type="button" onClick={onBack} className="w-full text-[#326371]/80 text-[10px] font-bold uppercase tracking-widest mt-2 hover:text-[#326371]">
-            Volver al Formulario de Pedidos
+          <button 
+            type="button" 
+            onClick={onBack}
+            className="w-full text-flavis-blue text-[10px] font-bold uppercase tracking-widest mt-6 hover:text-flavis-gold transition-colors"
+          >
+            Volver al formulario de pedidos
           </button>
         </form>
       </div>
-    </div>
+    </main>
   );
 };
 

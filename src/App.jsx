@@ -393,7 +393,7 @@ function App() {
   if (!isAppReady) {
     return (
       <div className="min-h-screen bg-[#326371] flex flex-col items-center justify-center p-4">
-        <img src="/Logo-Flavis.png" alt="Cargando..." className="w-48 md:w-64 animate-pulse mb-8" />
+        <img src="/Logo-Flavis.webp" alt="Cargando..." fetchPriority="high" className="w-48 md:w-64 animate-pulse mb-8" />
         <div className="w-10 h-10 border-4 border-flavis-gold border-t-transparent rounded-full animate-spin"></div>
         <p className="text-white/40 font-secondary text-[10px] uppercase tracking-[0.3em] mt-8 font-bold">
           Preparando el horno...
@@ -426,7 +426,7 @@ function App() {
       )}
 
       <header className="pt-12 pb-0 flex flex-col items-center">
-        <img src="/Logo-Flavis.png" alt="Flavis" className="w-64 md:w-80" />
+        <img src="/Logo-Flavis.webp" alt="Flavis" className="w-64 md:w-80" />
         <p className="text-white/60 font-secondary uppercase tracking-[0.4em] text-[10px] md:text-xs mt-4 border-t border-white/10 pt-4 w-48 text-center font-bold tracking-widest">
           de la semana
         </p>
