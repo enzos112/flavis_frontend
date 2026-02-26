@@ -325,8 +325,9 @@ const OrderForm = ({
     if (!formData.aceptoCondiciones) errors.aceptoCondiciones = true;
 
     if (formData.tipoEntrega === 'DELIVERY') {
-      const distritoValido = distritosLima.includes(formData.direccion.distrito);
-      if (!formData.direccion.distrito || !distritoValido || !formData.direccion.detalle?.trim()) {
+      const distritoValido = distritosLima.includes(formData.direccion?.distrito);
+      // Validamos usando optional chaining para no romper la app
+      if (!formData.direccion?.distrito || !distritoValido || !formData.direccion?.detalle?.trim()) {
         errors.direccion = true; 
       }
     }
@@ -529,7 +530,12 @@ const OrderForm = ({
                   </button>
                   <button 
                     type="button"
-                    onClick={() => setFormData({ ...formData, tipoEntrega: 'DELIVERY' })}
+                    // --- CORRECCIÓN CRÍTICA APLICADA AQUÍ: INICIALIZACIÓN SEGURA ---
+                    onClick={() => setFormData({ 
+                      ...formData, 
+                      tipoEntrega: 'DELIVERY',
+                      direccion: formData.direccion || { distrito: '', detalle: '', referencia: '' }
+                    })}
                     className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 h-[88px]
                       ${formData.tipoEntrega === 'DELIVERY' 
                         ? (formErrors.direccion ? 'border-red-500 bg-red-500/10 text-white shadow-inner' : 'border-flavis-gold bg-flavis-gold/10 text-white shadow-inner') 
@@ -583,14 +589,15 @@ const OrderForm = ({
                         <input 
                           type="text"
                           placeholder="Escribe tu distrito..."
+                          // --- CORRECCIÓN OPTIONAL CHAINING APLICADA ---
                           className={`w-full bg-[#366a7d] border p-4 rounded-xl text-white outline-none focus:border-flavis-gold transition-all pr-12 shadow-inner font-secondary text-sm 
-                            ${formErrors.direccion && !formData.direccion.distrito ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'border-[#326371]'}`}
-                          value={searchTerm || formData.direccion.distrito}
+                            ${formErrors.direccion && !formData.direccion?.distrito ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'border-[#326371]'}`}
+                          value={searchTerm || formData.direccion?.distrito || ''}
                           onFocus={() => setShowDropdown(true)}
                           onChange={(e) => {
                             const val = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ""); 
                             setSearchTerm(val);
-                            setFormData({ ...formData, direccion: { ...formData.direccion, distrito: "" } }); 
+                            setFormData({ ...formData, direccion: { ...(formData.direccion || {}), distrito: "" } }); 
                             setShowDropdown(true);
                           }}
                         />
@@ -605,20 +612,20 @@ const OrderForm = ({
                                 key={idx}
                                 className="px-5 py-4 text-sm text-white/90 hover:bg-flavis-gold hover:text-flavis-blue cursor-pointer transition-colors font-medium flex justify-between items-center border-b border-white/5 last:border-0"
                                 onClick={() => {
-                                  setFormData({ ...formData, direccion: { ...formData.direccion, distrito: d } });
+                                  setFormData({ ...formData, direccion: { ...(formData.direccion || {}), distrito: d } });
                                   setSearchTerm(d);
                                   setShowDropdown(false);
                                 }}
                               >
                                 <span className="tracking-tight">{d}</span>
-                                {formData.direccion.distrito === d && <span className="text-flavis-gold text-[10px]">●</span>}
+                                {formData.direccion?.distrito === d && <span className="text-flavis-gold text-[10px]">●</span>}
                               </li>
                             ))}
                             {filteredDistritos.length === 0 && <li className="px-5 py-4 text-sm text-white/40 italic">Distrito no encontrado</li>}
                           </ul>
                         </div>
                       )}
-                      {formErrors.direccion && !formData.direccion.distrito && (
+                      {formErrors.direccion && !formData.direccion?.distrito && (
                         <p className="text-red-400 text-[10px] mt-2 ml-2 font-bold uppercase italic animate-pulse">Selecciona un distrito de la lista</p>
                       )}
                     </div>
@@ -629,12 +636,13 @@ const OrderForm = ({
                         <input 
                           type="text"
                           placeholder="Ej: Av. Benavides 123, Dpto 401"
+                          // --- CORRECCIÓN OPTIONAL CHAINING APLICADA ---
                           className={`w-full bg-[#366a7d] border p-4 rounded-xl text-white outline-none focus:border-flavis-gold text-sm transition-all 
-                            ${formErrors.direccion && !formData.direccion.detalle ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'border-[#326371]'}`}
-                          value={formData.direccion.detalle}
-                          onChange={(e) => setFormData({ ...formData, direccion: { ...formData.direccion, detalle: e.target.value } })}
+                            ${formErrors.direccion && !formData.direccion?.detalle ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'border-[#326371]'}`}
+                          value={formData.direccion?.detalle || ''}
+                          onChange={(e) => setFormData({ ...formData, direccion: { ...(formData.direccion || {}), detalle: e.target.value } })}
                         />
-                        {formErrors.direccion && !formData.direccion.detalle && (
+                        {formErrors.direccion && !formData.direccion?.detalle && (
                           <p className="text-red-400 text-[10px] mt-2 ml-2 font-bold uppercase italic animate-pulse">La dirección es obligatoria</p>
                         )}
                       </div>
@@ -644,8 +652,9 @@ const OrderForm = ({
                           type="text"
                           placeholder="Ej: Frente al parque..."
                           className="w-full bg-[#366a7d] border border-[#326371] p-4 rounded-xl text-white outline-none focus:border-flavis-gold text-sm"
-                          value={formData.direccion.referencia}
-                          onChange={(e) => setFormData({ ...formData, direccion: { ...formData.direccion, referencia: e.target.value } })}
+                          // --- CORRECCIÓN OPTIONAL CHAINING APLICADA ---
+                          value={formData.direccion?.referencia || ''}
+                          onChange={(e) => setFormData({ ...formData, direccion: { ...(formData.direccion || {}), referencia: e.target.value } })}
                         />
                       </div>
                     </div>
