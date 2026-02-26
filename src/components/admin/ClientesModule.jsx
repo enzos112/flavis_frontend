@@ -3,7 +3,7 @@ import api from '../../services/api';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import LoadingSpinner from '../common/LoadingSpinner';
-// --- ICONOS VECTORIALES (REEMPLAZO DE EMOJIS) ---
+// --- ICONOS VECTORIALES  ---
 const Icons = {
   Edit: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>,
   Legend: () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>,

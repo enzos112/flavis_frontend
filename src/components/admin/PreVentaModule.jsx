@@ -19,7 +19,9 @@ const PreVentaModule = () => {
     fechaApertura: null,
     fechaCierre: null,
     fechaEntrega: null,
-    horarioEntrega: '',
+    horarioEntrega: '',   
+    horarioDelivery: '', 
+    horarioRecojo: '',    
     qrUrl: '',
     activo: true,
     stockMaximo: 100,
@@ -47,7 +49,9 @@ const PreVentaModule = () => {
           fechaCierre: res.data.fechaCierre ? new Date(res.data.fechaCierre) : null,
           fechaEntrega: res.data.fechaEntrega ? new Date(res.data.fechaEntrega + "T00:00:00") : null,
           stockMaximo: res.data.stockMaximo || 100,
-          stockActual: res.data.stockActual || 0 
+          stockActual: res.data.stockActual || 0,
+          horarioDelivery: res.data.horarioDelivery || res.data.horarioEntrega || '',
+          horarioRecojo: res.data.horarioRecojo || res.data.horarioEntrega || ''
         });
         setIsEditing(false); 
       } else {
@@ -65,7 +69,9 @@ const PreVentaModule = () => {
           stockMaximo: 100,
           stockActual: 0,
           qrUrl: ultimaCampania ? ultimaCampania.qrUrl : prev.qrUrl,
-          horarioEntrega: ultimaCampania ? ultimaCampania.horarioEntrega : prev.horarioEntrega
+          horarioDelivery: ultimaCampania ? (ultimaCampania.horarioDelivery || ultimaCampania.horarioEntrega) : '',
+          horarioRecojo: ultimaCampania ? (ultimaCampania.horarioRecojo || ultimaCampania.horarioEntrega) : '',
+          horarioEntrega: ultimaCampania ? ultimaCampania.horarioEntrega : ''
         }));
         setIsEditing(true); 
       }
@@ -103,7 +109,8 @@ const PreVentaModule = () => {
         ...preVenta,
         fechaApertura: formatFechaParaJava(preVenta.fechaApertura),
         fechaCierre: formatFechaParaJava(preVenta.fechaCierre),
-        fechaEntrega: preVenta.fechaEntrega ? preVenta.fechaEntrega.toISOString().split('T')[0] : null
+        fechaEntrega: preVenta.fechaEntrega ? preVenta.fechaEntrega.toISOString().split('T')[0] : null,
+        horarioEntrega: preVenta.horarioRecojo 
       };
 
       if (preVenta.id) await api.put(`/preventas/${preVenta.id}`, dataToSend);
@@ -131,7 +138,6 @@ const PreVentaModule = () => {
     } finally { setUploadingImg(false); }
   };
 
-  // ESTILO DINÁMICO
   const inputStyle = `w-full p-4 rounded-2xl outline-none transition-all font-bold text-sm font-sans ${isEditing ? 'bg-[#f8f9f5] dark:bg-flavis-dark border border-[#326371]/10 dark:border-white/10 focus:border-flavis-gold text-flavis-blue dark:text-white cursor-text shadow-inner' : 'bg-transparent border border-dashed border-[#326371]/20 dark:border-white/10 text-flavis-blue/60 dark:text-white/50 cursor-not-allowed pointer-events-none opacity-80'}`;
   
   const hoy = new Date();
@@ -173,6 +179,7 @@ const PreVentaModule = () => {
           
           {/* COLUMNA IZQUIERDA: FORMULARIO DE TEXTO */}
           <div className="flex-1 space-y-6">
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-[10px] uppercase font-bold text-flavis-blue dark:text-white/60 mb-2 ml-2 tracking-widest opacity-80 font-sans">Nombre de la Campaña</label>
@@ -180,13 +187,19 @@ const PreVentaModule = () => {
                   value={preVenta.nombreCampania} onChange={e => setPreVenta({...preVenta, nombreCampania: e.target.value})} />
               </div>
               <div>
-                <label className="block text-[10px] uppercase font-bold text-flavis-blue dark:text-white/60 mb-2 ml-2 tracking-widest opacity-80 font-sans">Rango Horario de Entrega</label>
-                <input required type="text" placeholder="Ej: 4:00 PM - 8:00 PM" className={inputStyle} disabled={!isEditing}
-                  value={preVenta.horarioEntrega} onChange={e => setPreVenta({...preVenta, horarioEntrega: e.target.value})} />
+                <label className="block text-[10px] uppercase font-bold text-flavis-blue dark:text-white/60 mb-2 ml-2 tracking-widest opacity-80 font-sans">Límite Galletas</label>
+                <input 
+                  required type="number" className={inputStyle} disabled={!isEditing} min={preVenta.stockActual} value={preVenta.stockMaximo} 
+                  onChange={e => {
+                    const valor = parseInt(e.target.value) || 0;
+                    setPreVenta({ ...preVenta, stockMaximo: Math.max(valor, preVenta.stockActual) });
+                  }} 
+                />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Fechas */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="custom-datepicker">
                 <label className="block text-[10px] uppercase font-bold text-flavis-blue dark:text-white/60 mb-2 ml-2 tracking-widest opacity-80 font-sans">Apertura</label>
                 <DatePicker
@@ -203,28 +216,30 @@ const PreVentaModule = () => {
                   className={inputStyle} portalId="root" placeholderText="Fin"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="custom-datepicker">
-                <label className="block text-[10px] uppercase font-bold text-flavis-blue dark:text-white/60 mb-2 ml-2 tracking-widest opacity-80 font-sans">Día de Entrega</label>
+                <label className="block text-[10px] uppercase font-bold text-flavis-blue dark:text-white/60 mb-2 ml-2 tracking-widest opacity-80 font-sans">Día Entrega</label>
                 <DatePicker
                   disabled={!isEditing} selected={preVenta.fechaEntrega} onChange={(date) => setPreVenta({...preVenta, fechaEntrega: date})}
                   minDate={preVenta.fechaCierre || preVenta.fechaApertura || hoy} dateFormat="dd/MM/yyyy" locale="es"
-                  className={inputStyle} placeholderText="Seleccionar día"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] uppercase font-bold text-flavis-blue dark:text-white/60 mb-2 ml-2 tracking-widest opacity-80 font-sans">Límite Galletas</label>
-                <input 
-                  required type="number" className={inputStyle} disabled={!isEditing} min={preVenta.stockActual} value={preVenta.stockMaximo} 
-                  onChange={e => {
-                    const valor = parseInt(e.target.value) || 0;
-                    setPreVenta({ ...preVenta, stockMaximo: Math.max(valor, preVenta.stockActual) });
-                  }} 
+                  className={inputStyle} placeholderText="Seleccionar"
                 />
               </div>
             </div>
+
+            {/* Horarios Separados */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-flavis-gold/5 dark:bg-flavis-gold/10 p-5 rounded-3xl border border-flavis-gold/20">
+              <div>
+                <label className="block text-[10px] uppercase font-black text-flavis-gold mb-2 ml-2 tracking-widest font-sans flex items-center gap-1">🛵 Horario Delivery</label>
+                <input required type="text" placeholder="Ej: 11:00 AM - 1:00 PM" className={inputStyle} disabled={!isEditing}
+                  value={preVenta.horarioDelivery} onChange={e => setPreVenta({...preVenta, horarioDelivery: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase font-black text-flavis-gold mb-2 ml-2 tracking-widest font-sans flex items-center gap-1">🏠 Horario Recojo</label>
+                <input required type="text" placeholder="Ej: 4:00 PM - 8:00 PM" className={inputStyle} disabled={!isEditing}
+                  value={preVenta.horarioRecojo} onChange={e => setPreVenta({...preVenta, horarioRecojo: e.target.value})} />
+              </div>
+            </div>
+
           </div>
 
           {/* COLUMNA DERECHA: CÓDIGO QR GIGANTE */}

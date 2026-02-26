@@ -515,8 +515,8 @@ const DashboardModule = ({ isDarkMode }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        <div className="bg-white p-8 rounded-[3rem] shadow-[0_8px_30px_rgba(50,99,113,0.06)] border border-flavis-blue/5">
-          <h3 className="text-xl font-main font-bold text-flavis-blue italic mb-8">Flujo de Ingresos</h3>
+        <div className="bg-white dark:bg-flavis-card-dark p-8 rounded-[3rem] shadow-[0_8px_30px_rgba(50,99,113,0.06)] dark:shadow-none border border-flavis-blue/5 dark:border-white/5 transition-all">
+          <h3 className="text-xl font-main font-bold text-flavis-blue dark:text-white italic mb-8">Flujo de Ingresos</h3>
           <div className="h-72 w-full min-h-[350px]"> 
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 50, right: 10, left: -20, bottom: 0 }}>
@@ -529,10 +529,10 @@ const DashboardModule = ({ isDarkMode }) => {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
                 <XAxis dataKey="name" fontSize={10} tickMargin={10} axisLine={false} tickLine={false} tick={{fill: chartTextColor, fontWeight: 'bold'}} className="font-secondary" />
                 <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{fill: chartTextColor, fontWeight: 'bold'}} className="font-secondary" />
-                <RechartsTooltip contentStyle={{ borderRadius: '1rem', border: 'none', fontFamily: 'Prata, serif' }} />
+                <RechartsTooltip contentStyle={{ borderRadius: '1rem', border: 'none', fontFamily: 'Prata, serif', backgroundColor: isDarkMode ? '#1e3b44' : '#fff', color: isDarkMode ? '#fff' : '#000' }} />
                 {divisionLines.map((line, idx) => (
                   <ReferenceLine key={idx} x={line.x} stroke="#ccc" strokeDasharray="5 5">
-                    <Label value={line.label} position="top" fill="#326371" fontSize={9} fontWeight="bold" offset={15} />
+                    <Label value={line.label} position="top" fill={isDarkMode ? "#ffffff80" : "#326371"} fontSize={9} fontWeight="bold" offset={15} />
                   </ReferenceLine>
                 ))}
                 <Area type="monotone" dataKey="total" stroke="#b8995a" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
@@ -541,24 +541,24 @@ const DashboardModule = ({ isDarkMode }) => {
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[3rem] shadow-[0_8px_30px_rgba(50,99,113,0.06)] border border-flavis-blue/5">
-          <h3 className="text-xl font-main font-bold text-flavis-blue italic mb-8">Sabores más preparados</h3>
+        <div className="bg-white dark:bg-flavis-card-dark p-8 rounded-[3rem] shadow-[0_8px_30px_rgba(50,99,113,0.06)] dark:shadow-none border border-flavis-blue/5 dark:border-white/5 transition-all">
+          <h3 className="text-xl font-main font-bold text-flavis-blue dark:text-white italic mb-8">Sabores más preparados</h3>
           <div className="h-72 w-full flex items-center">
             <ResponsiveContainer width="50%" height="100%">
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                   {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                 </Pie>
-                <RechartsTooltip contentStyle={{ borderRadius: '1rem', border: 'none', fontFamily: 'Prata, serif', fontSize: '12px' }} />
+                <RechartsTooltip contentStyle={{ borderRadius: '1rem', border: 'none', fontFamily: 'Prata, serif', fontSize: '12px', backgroundColor: isDarkMode ? '#1e3b44' : '#fff', color: isDarkMode ? '#fff' : '#000' }} />
               </PieChart>
             </ResponsiveContainer>
             <div className="w-1/2 pl-4 pr-2 overflow-y-auto max-h-[210px] custom-scrollbar">
               <div className="space-y-2">
                 {pieData.map((entry, index) => (
-                  <div key={index} className="flex items-center justify-between gap-2 border-b border-flavis-blue/5 pb-2">
+                  <div key={index} className="flex items-center justify-between gap-2 border-b border-flavis-blue/5 dark:border-white/5 pb-2">
                     <div className="flex items-center gap-2 truncate">
                       <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{backgroundColor: COLORS[index % COLORS.length]}} />
-                      <span className="text-[10px] font-black text-flavis-blue truncate uppercase tracking-tight">{entry.name}</span>
+                      <span className="text-[10px] font-black text-flavis-blue dark:text-white truncate uppercase tracking-tight">{entry.name}</span>
                     </div>
                     <span className="text-[10px] font-black text-flavis-gold">{entry.value}</span>
                   </div>

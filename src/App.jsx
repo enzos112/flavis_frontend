@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from './services/api';
 import CookieCard from './components/CookieCard';
 import OrderForm from './components/OrderForm';
@@ -48,6 +48,8 @@ function App() {
   const isClosed = !preVenta || preVenta.activo === false || preVenta.isClosed === true; 
   const [showWarningModal, setShowWarningModal] = useState(false); 
   const [showWholesaleModal, setShowWholesaleModal] = useState(false);
+  const packsScrollRef = useRef(null);
+  const cookiesScrollRef = useRef(null);
 
   useEffect(() => {
     const VERSION = "2.5"; 
@@ -181,6 +183,13 @@ function App() {
     return new Intl.DateTimeFormat('es-PE', {
       weekday: 'long', day: '2-digit', month: '2-digit'
     }).format(date);
+  };
+
+  const scrollCarousel = (ref, direction) => {
+    if (ref.current) {
+      const scrollAmount = 340;
+      ref.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+    }
   };
 
   const toTitleCase = (str) => {
@@ -404,6 +413,10 @@ function App() {
 
   if (view === 'login') return <Login onLogin={handleLogin} onBack={() => setView('form')} />;
   if (view === 'admin' && isAdmin) return <Intranet onLogout={handleLogout} />;
+
+  const activePacks = packs.filter(p => p.activo);
+  const activeCookies = cookies.filter(c => c.activo);
+  
   return (
     <div className="min-h-screen bg-[#326371] pb-20 px-4 md:px-10 relative">
       {/* --- MODAL DE BLOQUEO POR INTENTOS --- */}
@@ -461,93 +474,117 @@ function App() {
           /* --- VISTA: PRE-VENTA ABIERTA --- */
           <>
             {/* --- SECCIÓN 1: PACKS ESPECIALES --- */}
-            {packs.filter(p => p.activo).length > 0 && (
-              <section className="mt-12 mb-8 animate-in relative">
-                <h2 className="text-2xl sm:text-3xl text-center text-flavis-gold mb-4 font-secondary font-bold tracking-tight uppercase px-6">
-                  Packs Especiales
-                </h2>
-                <p className="text-[10px] text-center text-white/40 uppercase tracking-[0.3em] mb-8 font-bold">
-                  La combinación perfecta para compartir
-                </p>
-
-                <div className="relative group max-w-full">
-                  {/* Degradados Responsivos */}
-                  <div className="absolute left-0 top-0 bottom-0 w-3 sm:w-8 lg:w-12 bg-gradient-to-r from-[#326371] to-transparent z-20 pointer-events-none"></div>
-                  <div className="absolute right-0 top-0 bottom-0 w-5 sm:w-16 lg:w-20 bg-gradient-to-l from-[#326371] to-transparent z-20 pointer-events-none"></div>
-
-                  {/* INDICADOR SOBRIO Y VISIBLE (Flecha con fondo oscuro y blur) */}
-                  {packs.filter(p => p.activo).length > 1 && (
-                    <div className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-30 animate-pulse-horizontal opacity-90 pointer-events-none bg-[#1e3b44]/60 backdrop-blur-sm p-2 sm:p-3 rounded-full shadow-lg">
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-flavis-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                      </svg>
+            {activePacks.length > 0 && (
+              <section className="mt-8 mb-12 animate-in relative w-full">
+                <div className="max-w-7xl mx-auto px-4 lg:px-8 mb-6 relative flex justify-center items-end">
+                  <div className="text-center">
+                    <h2 className="text-2xl sm:text-3xl text-flavis-gold font-secondary font-bold tracking-tight uppercase">
+                      Packs Especiales
+                    </h2>
+                    <p className="text-[10px] text-white/50 uppercase tracking-[0.3em] mt-1 font-bold">
+                      La combinación perfecta
+                    </p>
+                  </div>
+                  
+                  {/* Botones de navegación PC flotando*/}
+                  {activePacks.length > 3 && (
+                    <div className="hidden md:flex gap-2 absolute right-4 lg:right-8 bottom-0">
+                      <button onClick={() => scrollCarousel(packsScrollRef, 'left')} className="p-3 rounded-full bg-white/5 hover:bg-flavis-gold text-white hover:text-flavis-blue transition-all backdrop-blur-sm border border-white/10">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg>
+                      </button>
+                      <button onClick={() => scrollCarousel(packsScrollRef, 'right')} className="p-3 rounded-full bg-white/5 hover:bg-flavis-gold text-white hover:text-flavis-blue transition-all backdrop-blur-sm border border-white/10">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7"></path></svg>
+                      </button>
                     </div>
                   )}
+                </div>
 
-                  {/* CARRUSEL: Lógica matemática para centrar o alinear a la izquierda */}
-                  <div className={`flex overflow-x-auto snap-x snap-mandatory gap-6 pb-10 scrollbar-hide px-6 sm:px-12 ${packs.filter(p => p.activo).length <= 4 ? 'lg:justify-center' : 'lg:px-20 lg:justify-start'}`}>
-                    {packs.filter(p => p.activo).map(pack => (
+                <div className="relative w-full">
+                  {/* Degradados Ajustados */}
+                  {/* Blur Izquierdo: Oculto en móvil, fijo en PC */}
+                  <div className="hidden sm:block absolute left-0 top-0 bottom-0 w-16 lg:w-24 bg-gradient-to-r from-[#326371] to-transparent z-10 pointer-events-none"></div>
+                  {/* Blur Derecho: Reducido */}
+                  <div className="absolute right-0 top-0 bottom-0 w-10 sm:w-16 lg:w-24 bg-gradient-to-l from-[#326371] to-transparent z-10 pointer-events-none"></div>
+
+                  {/* Contenedor del Carrusel */}
+                  <div 
+                    ref={packsScrollRef}
+                    // En móvil: pl-6 (espacio pequeño). En PC: pl-24 o pl-32 para que supere el blur.
+                    className={`flex overflow-x-auto snap-x snap-mandatory gap-4 sm:gap-6 pb-8 pt-2 scrollbar-hide pl-6 pr-16 sm:px-12 lg:pl-24 lg:pr-24 scroll-pl-6 lg:scroll-pl-24 ${activePacks.length <= 3 ? 'xl:justify-center' : ''}`}
+                  >
+                    {activePacks.map(pack => (
                       <div 
                         key={`p_${pack.id}`} 
-                        className="w-[82vw] xs:w-[300px] sm:w-[320px] flex-shrink-0 snap-start transition-transform duration-500 py-2"
+                        // w-[82vw] asegura que en celular se vea el 82% y asome el siguiente pack.
+                        className="w-[82vw] max-w-[320px] flex-shrink-0 snap-start transition-transform duration-500 hover:-translate-y-2"
                       >
                         <CookieCard 
                           cookie={pack} 
                           isPack={true}
                           quantity={cart[`p_${pack.id}`] || 0} 
                           onUpdate={(delta) => updateQuantity(`p_${pack.id}`, delta)} 
-                          onOpenModal={(p) => { 
-                            setSelectedCookie(p); 
-                            setIsDetailModalOpen(true); 
-                          }} 
+                          onOpenModal={(p) => { setSelectedCookie(p); setIsDetailModalOpen(true); }} 
                         />
                       </div>
                     ))}
+                    {/* Espaciador final */}
+                    <div className="w-4 flex-shrink-0 md:hidden"></div>
                   </div>
                 </div>
               </section>
             )}
 
             {/* --- SECCIÓN 2: INDIVIDUALES --- */}
-            {cookies.filter(c => c.activo).length > 0 && (
-              <section className={`${packs.filter(p => p.activo).length > 0 ? 'mt-8' : 'mt-12'} mb-16 animate-in relative`}>
-                <h2 className="text-xl sm:text-2xl text-center text-white/70 mb-8 font-secondary font-bold tracking-tight uppercase px-6">
-                  Elige tus favoritas
-                </h2>
+            {activeCookies.length > 0 && (
+              <section className="mt-4 mb-16 animate-in relative w-full">
+                <div className="max-w-7xl mx-auto px-4 lg:px-8 mb-6 relative flex justify-center items-end">
+                  <div className="text-center">
+                    <h2 className="text-xl sm:text-2xl text-white/80 font-secondary font-bold tracking-tight uppercase">
+                      Arma tu selección
+                    </h2>
+                    <p className="text-[10px] text-white/40 uppercase tracking-[0.3em] mt-1 font-bold">
+                      Sabores individuales
+                    </p>
+                  </div>
 
-                <div className="relative group max-w-full">
-                  {/* Degradados Responsivos */}
-                  <div className="absolute left-0 top-0 bottom-0 w-3 sm:w-8 lg:w-12 bg-gradient-to-r from-[#326371] to-transparent z-20 pointer-events-none"></div>
-                  <div className="absolute right-0 top-0 bottom-0 w-5 sm:w-16 lg:w-20 bg-gradient-to-l from-[#326371] to-transparent z-20 pointer-events-none"></div>
-
-                  {/* INDICADOR SOBRIO Y VISIBLE */}
-                  {cookies.filter(c => c.activo).length > 1 && (
-                    <div className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-30 animate-pulse-horizontal opacity-90 pointer-events-none bg-[#1e3b44]/60 backdrop-blur-sm p-2 sm:p-3 rounded-full shadow-lg">
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-flavis-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                      </svg>
+                  {/* Botones de navegación PC */}
+                  {activeCookies.length > 3 && (
+                    <div className="hidden md:flex gap-2 absolute right-4 lg:right-8 bottom-0">
+                      <button onClick={() => scrollCarousel(cookiesScrollRef, 'left')} className="p-3 rounded-full bg-white/5 hover:bg-white/20 text-white transition-all backdrop-blur-sm border border-white/10">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg>
+                      </button>
+                      <button onClick={() => scrollCarousel(cookiesScrollRef, 'right')} className="p-3 rounded-full bg-white/5 hover:bg-white/20 text-white transition-all backdrop-blur-sm border border-white/10">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7"></path></svg>
+                      </button>
                     </div>
                   )}
+                </div>
 
-                  {/* CARRUSEL: Lógica matemática para centrar o alinear a la izquierda */}
-                  <div className={`flex overflow-x-auto snap-x snap-mandatory gap-6 pb-10 scrollbar-hide px-6 sm:px-12 ${cookies.filter(c => c.activo).length <= 4 ? 'lg:justify-center' : 'lg:px-20 lg:justify-start'}`}>
-                    {cookies.filter(c => c.activo).map(cookie => (
+                <div className="relative w-full">
+                  {/* Degradados Ajustados */}
+                  <div className="hidden sm:block absolute left-0 top-0 bottom-0 w-16 lg:w-24 bg-gradient-to-r from-[#326371] to-transparent z-10 pointer-events-none"></div>
+                  <div className="absolute right-0 top-0 bottom-0 w-10 sm:w-16 lg:w-24 bg-gradient-to-l from-[#326371] to-transparent z-10 pointer-events-none"></div>
+
+                  {/* Contenedor del Carrusel */}
+                  <div 
+                    ref={cookiesScrollRef}
+                    className={`flex overflow-x-auto snap-x snap-mandatory gap-4 sm:gap-6 pb-8 pt-2 scrollbar-hide pl-6 pr-16 sm:px-12 lg:pl-24 lg:pr-24 scroll-pl-6 lg:scroll-pl-24 ${activeCookies.length <= 3 ? 'xl:justify-center' : ''}`}
+                  >
+                    {activeCookies.map(cookie => (
                       <div 
                         key={`c_${cookie.id}`} 
-                        className="w-[82vw] xs:w-[300px] sm:w-[320px] flex-shrink-0 snap-start transition-transform duration-500 py-2"
+                        className="w-[82vw] max-w-[320px] flex-shrink-0 snap-start transition-transform duration-500 hover:-translate-y-2"
                       >
                         <CookieCard 
                           cookie={cookie} 
                           isPack={false}
                           quantity={cart[`c_${cookie.id}`] || 0} 
                           onUpdate={(delta) => updateQuantity(`c_${cookie.id}`, delta)} 
-                          onOpenModal={(c) => { 
-                            setSelectedCookie(c); 
-                            setIsDetailModalOpen(true); 
-                          }} 
+                          onOpenModal={(c) => { setSelectedCookie(c); setIsDetailModalOpen(true); }} 
                         />
                       </div>
                     ))}
+                    <div className="w-4 flex-shrink-0 md:hidden"></div>
                   </div>
                 </div>
               </section>

@@ -47,7 +47,6 @@ const Login = ({ onLogin, onBack }) => {
             <input 
               type="email" 
               // PLACEHOLDER CORREGIDO
-              placeholder="admin@flavis.com"
               className="w-full bg-[#f8f9f5] border border-[#326371]/10 p-4 rounded-2xl outline-none focus:border-flavis-gold transition-all text-sm text-flavis-blue placeholder-flavis-blue/50"
               value={credentials.email}
               onChange={(e) => setCredentials({...credentials, email: e.target.value})}
@@ -59,7 +58,6 @@ const Login = ({ onLogin, onBack }) => {
             <label className="block text-xs uppercase font-bold text-flavis-blue mb-2 ml-4 tracking-widest">Contraseña</label>
             <input 
               type="password" 
-              // PLACEHOLDER CORREGIDO
               placeholder="••••••••"
               className="w-full bg-[#f8f9f5] border border-[#326371]/10 p-4 rounded-2xl outline-none focus:border-flavis-gold transition-all text-sm text-flavis-blue placeholder-flavis-blue/50"
               value={credentials.pass}

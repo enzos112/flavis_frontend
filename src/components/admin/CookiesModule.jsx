@@ -121,6 +121,15 @@ const CookiesModule = () => {
     
     const currentForm = activeTab === 'individuales' ? newCookie : newPack;
 
+    if (!currentForm.imagenUrl) {
+      setAlertModal({ 
+        show: true, 
+        title: "¡Falta la foto!", 
+        message: "Por favor, sube una imagen del producto antes de guardarlo." 
+      });
+      return;
+    }
+
     const precio = parseFloat(currentForm.precio) || 0;
     const costo = parseFloat(currentForm.costoProduccion) || 0; 
 

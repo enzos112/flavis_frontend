@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// --- MODAL 1: INFORMACIÓN DE ENTREGA (Sincronizado y Rediseñado) ---
+// --- MODAL 1: INFORMACIÓN DE ENTREGA (Sincronizado y Dinámico) ---
 const InfoModal = ({ isOpen, onClose, onAccept, preVenta }) => {
   if (!isOpen) return null;
   
-  const horario = preVenta?.horarioEntrega || 'el horario indicado';
+  // Extraemos los horarios dinámicos o usamos un fallback
+  const horarioDelivery = preVenta?.horarioDelivery || preVenta?.horarioEntrega || 'el horario indicado';
+  const horarioRecojo = preVenta?.horarioRecojo || preVenta?.horarioEntrega || 'el horario indicado';
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 bg-flavis-blue/95 backdrop-blur-md animate-in">
@@ -27,7 +29,7 @@ const InfoModal = ({ isOpen, onClose, onAccept, preVenta }) => {
             </p>
             <ul className="space-y-2 opacity-90 font-medium">
               <li className="flex gap-2"><span className="text-flavis-gold font-bold">✔</span> <span>Costo fijo de envío: <strong className="text-flavis-blue">S/ 15.00</strong>.</span></li>
-              <li className="flex gap-2"><span className="text-flavis-gold font-bold">✔</span> <span>Rango de entrega: <strong className="text-flavis-blue">{horario}</strong>.</span></li>
+              <li className="flex gap-2"><span className="text-flavis-gold font-bold">✔</span> <span>Rango de entrega: <strong className="text-flavis-blue">{horarioDelivery}</strong>.</span></li>
               <li className="flex gap-2"><span className="text-flavis-gold font-bold">✔</span> <span>El repartidor se comunicará contigo al llegar a tu dirección.</span></li>
             </ul>
           </div>
@@ -38,7 +40,7 @@ const InfoModal = ({ isOpen, onClose, onAccept, preVenta }) => {
               <span className="text-xl">🏠</span> Recojo en Local
             </p>
             <ul className="space-y-2 opacity-90 font-medium">
-              <li className="flex gap-2"><span className="text-flavis-gold font-bold">✔</span> <span>Horario de atención: <strong className="text-flavis-blue">{horario}</strong>.</span></li>
+              <li className="flex gap-2"><span className="text-flavis-gold font-bold">✔</span> <span>Horario de atención: <strong className="text-flavis-blue">{horarioRecojo}</strong>.</span></li>
               <li className="flex gap-2"><span className="text-flavis-gold font-bold">✔</span> <span>Ubicación: <strong>Santiago de Surco</strong> (Ref: Parque Casuarinas).</span></li>
               <li className="flex gap-2"><span className="text-flavis-gold font-bold">✔</span> <span>Brindar el <strong>nombre registrado</strong> en recepción.</span></li>
             </ul>
@@ -70,10 +72,11 @@ const InfoModal = ({ isOpen, onClose, onAccept, preVenta }) => {
   );
 };
 
-// --- MODAL 2: DINÁMICA DE PEDIDOS (Sincronizado) ---
+// --- MODAL 2: DINÁMICA DE PEDIDOS ---
 const ClosedInfoModal = ({ isOpen, onClose, preVenta }) => {
   if (!isOpen) return null;
-  const horario = preVenta?.horarioEntrega || 'el horario indicado';
+  const horarioDelivery = preVenta?.horarioDelivery || preVenta?.horarioEntrega || 'el horario indicado';
+  const horarioRecojo = preVenta?.horarioRecojo || preVenta?.horarioEntrega || 'el horario indicado';
 
   return (
     <div className="fixed inset-0 z-[900] flex items-center justify-center p-4 bg-flavis-blue/90 backdrop-blur-sm animate-in">
@@ -89,8 +92,8 @@ const ClosedInfoModal = ({ isOpen, onClose, preVenta }) => {
           <div>
             <p className="font-bold mb-2 text-base italic text-with-symbols">📍 Entrega y Recojo</p>
             <div className="space-y-2 opacity-90 text-with-symbols">
-              <p>• <span className="font-bold">Delivery:</span> Servicio gestionado por Flavis (<span className="font-bold text-flavis-gold">S/ 15.00</span>) en el rango de <span className="font-bold">{horario}</span>.</p>
-              <p>• <span className="font-bold">Recojo:</span> En Santiago de Surco (<span className="font-bold">{horario}</span>). Solo debes brindar tu nombre en recepción.</p>
+              <p>• <span className="font-bold">Delivery:</span> Servicio gestionado por Flavis (<span className="font-bold text-flavis-gold">S/ 15.00</span>) en el rango de <span className="font-bold">{horarioDelivery}</span>.</p>
+              <p>• <span className="font-bold">Recojo:</span> En Santiago de Surco (<span className="font-bold">{horarioRecojo}</span>). Solo debes brindar tu nombre en recepción.</p>
             </div>
           </div>
           <div className="bg-flavis-gold/15 p-4 sm:p-5 rounded-2xl border border-flavis-gold/30">
@@ -193,9 +196,13 @@ const CookieDetailModal = ({ cookie, isOpen, onClose }) => {
   );
 };  
 
-const SuccessModal = ({ isOpen, onClose, customerName, tipoEntrega }) => {
+const SuccessModal = ({ isOpen, onClose, customerName, tipoEntrega, preVenta }) => {
   if (!isOpen) return null;
   const firstName = customerName ? customerName.trim().split(' ')[0] : 'Cookie Lover';
+
+  const horario = tipoEntrega === 'DELIVERY' 
+    ? (preVenta?.horarioDelivery || preVenta?.horarioEntrega || 'el horario indicado')
+    : (preVenta?.horarioRecojo || preVenta?.horarioEntrega || 'el horario indicado');
 
   return (
     <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-flavis-blue/95 backdrop-blur-md animate-in">
@@ -208,8 +215,8 @@ const SuccessModal = ({ isOpen, onClose, customerName, tipoEntrega }) => {
           <p>Tu pedido ha sido registrado con éxito.</p>
           <div className="bg-flavis-gold/10 p-4 rounded-2xl border border-flavis-gold/20 text-flavis-blue font-medium italic">
             {tipoEntrega === 'DELIVERY' 
-              ? "🛵 ¡Todo listo! Muy pronto estaremos llevando tus galletas a tu dirección en el horario indicado (11:00 am - 1:00 pm). ¡Mantente atenta al celular!"
-              : "🏠 ¡Genial! Te esperamos en nuestro local de Surco (Santiago de Surco - Gardenias) en el horario de 11:00 am a 1:00 pm. Solo brinda tu nombre en recepción."
+              ? `🛵 ¡Todo listo! Muy pronto estaremos llevando tus galletas a tu dirección en el horario de ${horario}. ¡Mantente pendiente al celular!`
+              : `🏠 ¡Genial! Te esperamos en nuestro local de Surco (Ref: Parque Casuarinas) en el horario de ${horario}. Solo brinda tu nombre en recepción.`
             }
           </div>
         </div>
@@ -574,7 +581,7 @@ const OrderForm = ({
                             <span className="text-sm text-white font-bold leading-tight block">
                                 {preVenta?.fechaEntrega ? new Date(preVenta.fechaEntrega + "T00:00:00").toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: 'short' }) : '--'}
                             </span>
-                            <span className="text-xs text-white/50 italic block">({preVenta?.horarioEntrega || 'Por confirmar'})</span>
+                            <span className="text-xs text-white/50 italic block">({preVenta?.horarioDelivery || preVenta?.horarioEntrega || 'Por confirmar'})</span>
                         </div>
                     </div>
                   </div>
